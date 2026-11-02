@@ -13,6 +13,9 @@ export class Company {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({type: 'boolean', default: true })
+  isActive: boolean;
+  
   @Column({ type: 'varchar', length: 200 })
   name: string;
 

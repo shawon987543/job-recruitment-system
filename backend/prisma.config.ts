@@ -1,4 +1,5 @@
 import "dotenv/config";
+// @ts-expect-error - Prisma exposes this module at runtime when the Prisma CLI is installed.
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({

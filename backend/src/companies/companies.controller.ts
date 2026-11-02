@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -11,10 +12,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { Put } from '@nestjs/common';
+import { UpdateCompanyDto } from './dto/update-company.dto';
+import { UpdateCompanyStatusDto } from './dto/update-company-status.dto';
 import { CompaniesService } from './companies.service';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { RejectCompanyDto } from './dto/reject-company.dto';
-
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -39,17 +42,77 @@ export class CompaniesController {
   return this.companiesService.createCompanyAdmin(id, dto);
 }
 
-  @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  register(@Body() dto: RegisterCompanyDto) {
-    return this.companiesService.register(dto);
-  }
+@Delete(':id/admin/:adminId')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+removeCompanyAdmin(
+  @Param('id', ParseIntPipe) id: number,
+  @Param('adminId', ParseIntPipe) adminId: number,
+) {
+  return this.companiesService.removeCompanyAdmin(id, adminId);
+}
+
+    // List all companies.
+@Get()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+findAll() {
+  return this.companiesService.findAll();
+}
 
   @Get('pending')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)
   findPending() {
     return this.companiesService.findPending();
+  }
+
+// View one company and its assigned admins.
+@Get(':id')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+findOne(@Param('id', ParseIntPipe) id: number) {
+  return this.companiesService.findOne(id);
+}
+
+// Update company details.
+@Put(':id')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+update(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateCompanyDto,
+) {
+  return this.companiesService.update(id, dto);
+}
+
+// Activate or deactivate a company.
+@Patch(':id/active-status')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.SUPER_ADMIN)
+updateActiveStatus(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateCompanyStatusDto,
+) {
+  return this.companiesService.updateActiveStatus(
+    id,
+    dto.isActive,
+  );
+}
+
+    // Super admin manullay create an approved company.
+    @Post()
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Role.SUPER_ADMIN)
+    @HttpCode(HttpStatus.CREATED)
+    createManually(@Body() dto: RegisterCompanyDto){
+        return this.companiesService.createManually(dto);
+    }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  register(@Body() dto: RegisterCompanyDto) {
+    return this.companiesService.register(dto);
   }
 
   @Patch(':id/approve')

@@ -9,11 +9,13 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 
-import { User } from '../users/entities/user.entity';
+import { Company } from '../companies/entities/company.entity';
+import { CompanyStatus } from '../common/enums/company-status.enum';
 import { Role } from '../common/enums/role.enum';
+import { User } from '../users/entities/user.entity';
+
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
@@ -21,11 +23,47 @@ export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+
+    @InjectRepository(Company)
+    private readonly companiesRepository: Repository<Company>,
+
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
   ) {}
 
- 
+  /**
+   * Check whether a Company Admin's company is approved and active.
+   * Candidates and Super Admins do not need this company check.
+   */
+  private async ensureCompanyIsActive(user: User): Promise<void> {
+    if (user.role !== Role.COMPANY_ADMIN) {
+      return;
+    }
+
+    if (!user.companyId) {
+      throw new UnauthorizedException(
+        'Your account is not assigned to a company',
+      );
+    }
+
+    const company = await this.companiesRepository.findOne({
+      where: { id: user.companyId },
+    });
+
+    if (
+      !company ||
+      !company.isActive ||
+      company.status !== CompanyStatus.APPROVED
+    ) {
+      throw new UnauthorizedException(
+        'Your company is inactive or not approved',
+      );
+    }
+  }
+
+  /**
+   * Refresh access and refresh tokens.
+   */
   async refresh(refreshToken: string) {
     const refreshSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
@@ -35,10 +73,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    let payload: {
-      sub: number;
-      email: string;
-    };
+    let payload: { sub: number; email: string };
 
     try {
       payload = await this.jwtService.verifyAsync(refreshToken, {
@@ -56,13 +91,14 @@ export class AuthService {
       .where('user.id = :id', { id: payload.sub })
       .getOne();
 
-    if (
-      !user ||
-      !user.isActive ||
-      !user.refreshTokenHash
-    ) {
-      throw new UnauthorizedException('Refresh token is no longer valid');
+    if (!user || !user.isActive || !user.refreshTokenHash) {
+      throw new UnauthorizedException(
+        'Refresh token is no longer valid',
+      );
     }
+
+    // Reject token refresh if the Company Admin's company is inactive.
+    await this.ensureCompanyIsActive(user);
 
     const matches = await bcrypt.compare(
       refreshToken,
@@ -107,6 +143,7 @@ export class AuthService {
       },
     );
 
+    // Store only the hash of the new refresh token.
     user.refreshTokenHash = await bcrypt.hash(newRefreshToken, 12);
     await this.usersRepository.save(user);
 
@@ -119,6 +156,9 @@ export class AuthService {
     };
   }
 
+  /**
+   * Logout by revoking the stored refresh token.
+   */
   async logout(userId: number) {
     const user = await this.usersRepository
       .createQueryBuilder('user')
@@ -134,47 +174,56 @@ export class AuthService {
     return { message: 'Logout successful' };
   }
 
-
+  /**
+   * Change a user's password.
+   */
   async ChangePassword(
     userId: number,
     dto: ChangePasswordDto,
-  ){
+  ) {
     const user = await this.usersRepository
-    .createQueryBuilder('user')
-    .addSelect('user.password')
-    .where('user.id = :id',{id:userId})
-    .getOne();
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.id = :id', { id: userId })
+      .getOne();
 
-    if(!user || !user.isActive){
-        throw new UnauthorizedException('User not found or inactive');
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException('User not found or inactive');
     }
 
-    const passwordMatchs = await bcrypt.compare(
-        dto.currentPassword,
-        user.password,
+    const passwordMatches = await bcrypt.compare(
+      dto.currentPassword,
+      user.password,
     );
 
-    if(!passwordMatchs){
-        throw new UnauthorizedException('Current password is incorrect');
+    if (!passwordMatches) {
+      throw new UnauthorizedException(
+        'Current password is incorrect',
+      );
     }
 
-    if(dto.currentPassword === dto.newPassword){
-        throw new ConflictException(
-            'New password must be different from the current password',
-        );
+    if (dto.currentPassword === dto.newPassword) {
+      throw new ConflictException(
+        'New password must be different from the current password',
+      );
     }
 
     user.password = await bcrypt.hash(dto.newPassword, 12);
     user.mustChangePassword = false;
+
+    // Require the user to log in again after changing the password.
     user.refreshTokenHash = null;
 
     await this.usersRepository.save(user);
 
-    return{
-        message: 'Password changed successfully. Please log in again.',
+    return {
+      message: 'Password changed successfully. Please log in again.',
     };
   }
 
+  /**
+   * Register a new Candidate account.
+   */
   async register(dto: RegisterDto) {
     const email = dto.email.toLowerCase().trim();
 
@@ -221,23 +270,32 @@ export class AuthService {
     }
   }
 
+  /**
+   * Authenticate a user and issue access and refresh tokens.
+   */
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
 
-    // Password is excluded from normal entity queries, so select it explicitly.
+    // Password is excluded from normal queries, so select it explicitly.
     const user = await this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.password')
       .where('user.email = :email', { email })
       .getOne();
 
-    if (!user || !(await bcrypt.compare(dto.password, user.password))) {
+    if (
+      !user ||
+      !(await bcrypt.compare(dto.password, user.password))
+    ) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     if (!user.isActive) {
       throw new UnauthorizedException('Your account is inactive');
     }
+
+    // Company Admins can log in only if their company is approved and active.
+    await this.ensureCompanyIsActive(user);
 
     const payload = {
       sub: user.id,
@@ -250,12 +308,15 @@ export class AuthService {
     const accessSecret = this.configService.get<string>(
       'JWT_ACCESS_SECRET',
     );
+
     const refreshSecret = this.configService.get<string>(
       'JWT_REFRESH_SECRET',
     );
 
     if (!accessSecret || !refreshSecret) {
-      throw new Error('JWT secrets are missing from environment configuration');
+      throw new Error(
+        'JWT secrets are missing from environment configuration',
+      );
     }
 
     const accessToken = await this.jwtService.signAsync(payload, {

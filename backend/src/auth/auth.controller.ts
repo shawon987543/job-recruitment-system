@@ -11,7 +11,6 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { AuthGuard } from '@nestjs/passport';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Role } from '../common/enums/role.enum'
@@ -76,14 +75,14 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('profile')
-  @UseGuards(AuthGuard('jwt'))
-  getProfile(@CurrentUser() user: AuthenticatedUser) {
-    return {
-      id: user.userId,
-      email: user.email,
-      role: user.role,
-      companyId: user.companyId,
-    };
+  getProfile(@CurrentUser() user: AuthenticatedUser){
+    return{
+        id: user.userId,
+        email: user.email,
+        role: user.role,
+        companyId: user.companyId,
+    }
   }
 }

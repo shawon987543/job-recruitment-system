@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
-
+import { UpdateCompanyDto } from './dto/update-company.dto';
 import { Role } from '../common/enums/role.enum';
 import { CompanyStatus } from '../common/enums/company-status.enum';
 import { User } from '../users/entities/user.entity';
@@ -29,6 +29,182 @@ export class CompaniesService {
 
     private readonly mailService: MailService,
   ) {}
+
+  // Super Admin: list all companies with their assigned admins.
+async findAll() {
+  const companies = await this.companiesRepository.find({
+    order: { createdAt: 'DESC' },
+  });
+
+  const admins = await this.userRepository.find({
+    where: { role: Role.COMPANY_ADMIN },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      companyId: true,
+      isActive: true,
+    },
+  });
+
+  return companies.map((company) => ({
+    ...company,
+    admins: admins.filter(
+      (admin) => admin.companyId === company.id,
+    ),
+  }));
+}
+
+// Super Admin: view one company and its assigned admins.
+async findOne(companyId: number) {
+  const company = await this.companiesRepository.findOne({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new NotFoundException('Company not found');
+  }
+
+  const admins = await this.userRepository.find({
+    where: {
+      companyId,
+      role: Role.COMPANY_ADMIN,
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      companyId: true,
+      isActive: true,
+    },
+  });
+
+  return {
+    ...company,
+    admins,
+  };
+}
+
+// Super Admin: update company contact and business details.
+async update(companyId: number, dto: UpdateCompanyDto) {
+  const company = await this.companiesRepository.findOne({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new NotFoundException('Company not found');
+  }
+
+  if (dto.email) {
+    dto.email = dto.email.trim().toLowerCase();
+
+    const existing = await this.companiesRepository.findOne({
+      where: { email: dto.email },
+    });
+
+    if (existing && existing.id !== companyId) {
+      throw new ConflictException(
+        'A company with this email already exists',
+      );
+    }
+  }
+
+  Object.assign(company, {
+    ...dto,
+    name: dto.name?.trim() ?? company.name,
+    contactName: dto.contactName?.trim() ?? company.contactName,
+    contactPhone: dto.contactPhone?.trim() ?? company.contactPhone,
+    website: dto.website?.trim() || (dto.website === '' ? null : company.website),
+    address: dto.address?.trim() || (dto.address === '' ? null : company.address),
+    description:
+      dto.description?.trim() ||
+      (dto.description === '' ? null : company.description),
+  });
+
+  try {
+    return await this.companiesRepository.save(company);
+  } catch (error: unknown) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === '23505'
+    ) {
+      throw new ConflictException(
+        'A company with this email already exists',
+      );
+    }
+
+    throw error;
+  }
+}
+
+// Super Admin: activate or deactivate a company.
+async updateActiveStatus(companyId: number, isActive: boolean) {
+  const company = await this.companiesRepository.findOne({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new NotFoundException('Company not found');
+  }
+
+  company.isActive = isActive;
+  await this.companiesRepository.save(company);
+
+  return {
+    message: `Company ${isActive ? 'activated' : 'deactivated'} successfully`,
+    company,
+  };
+}
+
+    // Super Admin: remove a Company Admin from a company.
+async removeCompanyAdmin(
+  companyId: number,
+  adminId: number,
+) {
+  // Check whether company exists.
+  const company = await this.companiesRepository.findOne({
+    where: { id: companyId },
+  });
+
+  if (!company) {
+    throw new NotFoundException('Company not found');
+  }
+
+  // Find admin assigned to this company.
+  const admin = await this.userRepository.findOne({
+    where: {
+      id: adminId,
+      companyId: companyId,
+      role: Role.COMPANY_ADMIN,
+    },
+  });
+
+  if (!admin) {
+    throw new NotFoundException(
+      'Company Admin not found or does not belong to this company',
+    );
+  }
+
+  // Unassign admin without deleting the account.
+  admin.companyId = null;
+
+  await this.userRepository.save(admin);
+
+  return {
+    message: 'Company Admin removed from company successfully',
+    admin: {
+      id: admin.id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.role,
+      companyId: admin.companyId,
+    },
+  };
+}
 
   // Create a Company Admin for an approved company.
   async createCompanyAdmin(
@@ -147,6 +323,61 @@ export class CompaniesService {
       };
     }
   }
+
+  // Manually create an approved company.
+
+  async createManually(dto: RegisterCompanyDto){
+    const email = dto.email.trim().toLowerCase();
+
+    const existingCompany = 
+    await this.companiesRepository.findOne({
+        where: { email },
+    });
+
+    if(existingCompany){
+        throw new ConflictException(
+            'A Company with this email already exists',
+        );
+    }
+
+    const company = this.companiesRepository.create({
+        name: dto.name.trim(),
+        email,
+        contactName: dto.contactName.trim(),
+        contactPhone: dto.contactPhone.trim(),
+        website: dto.website?.trim() || null,
+        address: dto.address?.trim() || null,
+        description: dto.description?.trim() || null,
+        status: CompanyStatus.APPROVED,
+        rejectionReason: null,
+        reviewedBy: null,
+        reviewedAt: new Date(),
+    });
+
+    try{
+        const saveCompany = 
+         await this.companiesRepository.save(company);
+
+         return{
+            message: 'Company created successfully',
+            company: saveCompany,
+         };
+    } catch (error: unknown){
+        if (
+            typeof error === 'object' &&
+            error !== null && 
+            'code' in error && 
+            error.code === '23505'
+        ){
+            throw new ConflictException(
+                'A company with this email aready exists',
+            );
+        }
+
+        throw error;
+    }
+  }
+
 
   // Submit a new company registration.
   async register(dto: RegisterCompanyDto) {
