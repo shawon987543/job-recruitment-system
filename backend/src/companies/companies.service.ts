@@ -17,7 +17,7 @@ import { MailService } from '../mail/mail.service';
 import { Company } from './entities/company.entity';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { CreateCompanyAdminDto } from './dto/create-company-admin.dto';
-
+import { RegisterCompanyAdminDto } from './dto/register-company-admin.dto';
 @Injectable()
 export class CompaniesService {
   constructor(
@@ -55,6 +55,87 @@ async findAll() {
     ),
   }));
 }
+
+  // Submit a Company Admin registration request for Super Admin approval.
+  async registerCompanyAdmin(dto: RegisterCompanyAdminDto) {
+    const companyEmail = dto.companyEmail.trim().toLowerCase();
+    const adminEmail = dto.adminEmail.trim().toLowerCase();
+
+    const existingCompany = await this.companiesRepository.findOne({
+      where: { email: companyEmail },
+    });
+
+    if (existingCompany) {
+      throw new ConflictException(
+        'A company with this email is already registered',
+      );
+    }
+
+    const existingAdmin = await this.userRepository.findOne({
+      where: { email: adminEmail },
+    });
+
+    if (existingAdmin) {
+      throw new ConflictException(
+        'A user with this admin email already exists',
+      );
+    }
+
+    const existingApplicant = await this.companiesRepository.findOne({
+      where: { adminEmail },
+    });
+
+    if (existingApplicant) {
+      throw new ConflictException(
+        'A registration request with this admin email already exists',
+      );
+    }
+
+    const company = this.companiesRepository.create({
+      name: dto.companyName.trim(),
+      email: companyEmail,
+      adminName: dto.adminName.trim(),
+      adminEmail,
+      contactName: dto.adminName.trim(),
+      contactPhone: dto.contactPhone.trim(),
+      website: dto.website?.trim() || null,
+      address: dto.address?.trim() || null,
+      description: dto.description?.trim() || null,
+      status: CompanyStatus.PENDING,
+      rejectionReason: null,
+      reviewedBy: null,
+      reviewedAt: null,
+    });
+
+    try {
+      const savedCompany = await this.companiesRepository.save(company);
+
+      return {
+        message: 'Company Admin registration request submitted successfully. Await Super Admin approval.',
+        company: {
+          id: savedCompany.id,
+          name: savedCompany.name,
+          email: savedCompany.email,
+          adminName: savedCompany.adminName,
+          adminEmail: savedCompany.adminEmail,
+          status: savedCompany.status,
+        },
+      };
+    } catch (error: unknown) {
+      if (
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        error.code === '23505'
+      ) {
+        throw new ConflictException(
+          'A company or user with the submitted email already exists',
+        );
+      }
+
+      throw error;
+    }
+  }
 
 // Super Admin: view one company and its assigned admins.
 async findOne(companyId: number) {
@@ -442,35 +523,151 @@ async removeCompanyAdmin(
   }
 
   // Approve a pending company registration.
-  async approve(
+   async approve(
     companyId: number,
     reviewerId: number,
   ) {
-    const company =
-      await this.companiesRepository.findOne({
-        where: { id: companyId },
-      });
+    const result = await this.companiesRepository.manager.transaction(
+      async (manager) => {
+        const companiesRepository = manager.getRepository(Company);
+        const usersRepository = manager.getRepository(User);
 
-    if (!company) {
-      throw new NotFoundException('Company not found');
+        const company = await companiesRepository.findOne({
+          where: { id: companyId },
+        });
+
+        if (!company) {
+          throw new NotFoundException('Company not found');
+        }
+
+        if (company.status !== CompanyStatus.PENDING) {
+          throw new BadRequestException(
+            'Only pending company registrations can be approved',
+          );
+        }
+
+        let admin: User | null = null;
+
+        // New Company Admin registration requests contain both fields.
+        if (company.adminName && company.adminEmail) {
+          const adminEmail = company.adminEmail.trim().toLowerCase();
+
+          const existingAdmin = await usersRepository.findOne({
+            where: { email: adminEmail },
+          });
+
+          if (existingAdmin) {
+            throw new ConflictException(
+              'A user with this admin email already exists',
+            );
+          }
+
+          const temporaryPassword =
+            `Aa1-${randomBytes(18).toString('hex')}`;
+
+          const passwordHash = await bcrypt.hash(
+            temporaryPassword,
+            12,
+          );
+
+          admin = usersRepository.create({
+            name: company.adminName.trim(),
+            email: adminEmail,
+            password: passwordHash,
+            role: Role.COMPANY_ADMIN,
+            companyId: company.id,
+            isActive: true,
+            mustChangePassword: true,
+            refreshTokenHash: null,
+          });
+
+          admin = await usersRepository.save(admin);
+
+          // Keep the temporary password only in server-side memory
+          // until the email delivery attempt.
+          company.status = CompanyStatus.APPROVED;
+          company.rejectionReason = null;
+          company.reviewedBy = reviewerId;
+          company.reviewedAt = new Date();
+
+          await companiesRepository.save(company);
+
+          return {
+            company,
+            admin,
+            temporaryPassword,
+          };
+        }
+
+        // Older company registrations can still be approved normally.
+        if (company.adminName || company.adminEmail) {
+          throw new BadRequestException(
+            'Company Admin name and email must both be provided',
+          );
+        }
+
+        company.status = CompanyStatus.APPROVED;
+        company.rejectionReason = null;
+        company.reviewedBy = reviewerId;
+        company.reviewedAt = new Date();
+
+        await companiesRepository.save(company);
+
+        return {
+          company,
+          admin: null,
+          temporaryPassword: null,
+        };
+      },
+    );
+
+    // Send credentials after the database transaction succeeds.
+    if (result.admin && result.temporaryPassword) {
+      try {
+        await this.mailService.sendCompanyAdminCredentials(
+          result.admin.name,
+          result.admin.email,
+          result.temporaryPassword,
+          result.company.name,
+        );
+
+        return {
+          message:
+            'Company approved. Company Admin account created and temporary credentials emailed successfully.',
+          emailSent: true,
+          company: result.company,
+          admin: {
+            id: result.admin.id,
+            name: result.admin.name,
+            email: result.admin.email,
+            role: result.admin.role,
+            companyId: result.admin.companyId,
+            mustChangePassword: result.admin.mustChangePassword,
+          },
+        };
+      } catch {
+        // Do not expose the temporary password in the API response.
+        return {
+          message:
+            'Company approved and Company Admin account created, but the email could not be delivered. Credentials must be resent through a secure process.',
+          emailSent: false,
+          company: result.company,
+          admin: {
+            id: result.admin.id,
+            name: result.admin.name,
+            email: result.admin.email,
+            role: result.admin.role,
+            companyId: result.admin.companyId,
+            mustChangePassword: result.admin.mustChangePassword,
+          },
+        };
+      }
     }
-
-    if (company.status !== CompanyStatus.PENDING) {
-      throw new BadRequestException(
-        'Only pending company registrations can be approved',
-      );
-    }
-
-    company.status = CompanyStatus.APPROVED;
-    company.rejectionReason = null;
-    company.reviewedBy = reviewerId;
-    company.reviewedAt = new Date();
-
-    await this.companiesRepository.save(company);
 
     return {
       message: 'Company approved successfully',
-      company,
+      emailSent: null,
+      company: result.company,
     };
   }
 

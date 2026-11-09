@@ -4,8 +4,11 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+
+import { Company } from '../companies/entities/company.entity';
+import { CompanyStatus } from '../common/enums/company-status.enum';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,10 +17,39 @@ import { FindOptionsSelect } from 'typeorm';
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+  @InjectRepository(User)
+  private readonly userRepository: Repository<User>,
 
+  @InjectRepository(Company)
+  private readonly companyRepository: Repository<Company>,
+) {}
+
+// Get pending Company Admin registration requests
+async findCompanyAdminRequests() {
+  return this.companyRepository.find({
+    where: {
+      status: CompanyStatus.PENDING,
+      adminEmail: Not(IsNull()),
+      adminName: Not(IsNull()),
+    },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      adminName: true,
+      adminEmail: true,
+      contactPhone: true,
+      website: true,
+      address: true,
+      description: true,
+      status: true,
+      createdAt: true,
+    },
+    order: {
+      createdAt: 'DESC',
+    },
+  });
+}
   // Get all Company Admins
 async findAllCompanyAdmins() {
   return this.userRepository.find({

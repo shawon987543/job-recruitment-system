@@ -1,361 +1,465 @@
+
 "use client";
+
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-  Activity,
-  ArrowRight,
-  Bell,
   BriefcaseBusiness,
   Building2,
-  CalendarDays,
-  CheckCircle2,
-  ChevronRight,
-  Clock3,
-  FileText,
-  GraduationCap,
-  LayoutDashboard,
-  MapPin,
-  Search,
-  Settings,
-  Sparkles,
-  UserRound,
-  Wallet,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  UserPlus,
 } from "lucide-react";
 
-const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard, active: true },
-  { label: "Browse Jobs", icon: BriefcaseBusiness },
-  { label: "My Applications", icon: FileText },
-  { label: "My Profile", icon: UserRound },
-];
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
-const stats = [
-  {
-    label: "Total Applications",
-    value: "12",
-    icon: FileText,
-    color: "#315efb",
-    background: "#eef2ff",
-    note: "Applications submitted",
-  },
-  {
-    label: "Pending Review",
-    value: "05",
-    icon: Clock3,
-    color: "#d58b16",
-    background: "#fff5df",
-    note: "Waiting for response",
-  },
-  {
-    label: "Shortlisted",
-    value: "04",
-    icon: CheckCircle2,
-    color: "#0b9b70",
-    background: "#e5f8f0",
-    note: "Moving forward",
-  },
-  {
-    label: "Rejected",
-    value: "03",
-    icon: Activity,
-    color: "#dc5263",
-    background: "#fff0f1",
-    note: "Closed applications",
-  },
-];
+export default function LoginPage() {
+  const router = useRouter();
 
-const jobs = [
-  {
-    company: "T",
-    companyName: "Tech Solutions",
-    title: "Frontend Developer",
-    location: "Dhaka, Bangladesh",
-    type: "Full Time",
-    salary: "৳25k – ৳40k",
-    color: "#eef2ff",
-  },
-  {
-    company: "D",
-    companyName: "Digital Agency",
-    title: "React Developer",
-    location: "Remote",
-    type: "Full Time",
-    salary: "৳30k – ৳50k",
-    color: "#e9f8f3",
-  },
-  {
-    company: "C",
-    companyName: "Creative Studio",
-    title: "UI/UX Designer",
-    location: "Dhaka, Bangladesh",
-    type: "Contract",
-    salary: "৳20k – ৳35k",
-    color: "#fff2e7",
-  },
-];
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-const activities = [
-  {
-    title: "Frontend Developer",
-    company: "ABC Technologies",
-    date: "Applied recently",
-    status: "Pending",
-  },
-  {
-    title: "React Developer",
-    company: "Digital Agency",
-    date: "Application reviewed",
-    status: "Shortlisted",
-  },
-  {
-    title: "UI Developer",
-    company: "Creative Studio",
-    date: "Application update",
-    status: "Rejected",
-  },
-];
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
 
-export default function CandidateDashboard() {
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          Array.isArray(data.message)
+            ? data.message.join(", ")
+            : data.message || "Login failed",
+        );
+      }
+
+      sessionStorage.setItem("access_token", data.access_token);
+      sessionStorage.setItem("refresh_token", data.refresh_token);
+      sessionStorage.setItem("user", JSON.stringify(data.user));
+
+      if (data.user?.mustChangePassword) {
+        router.push("/change-password");
+        return;
+      }
+
+      switch (data.user?.role) {
+        case "SUPER_ADMIN":
+          window.location.href = "/admin";
+          return;
+
+        case "COMPANY_ADMIN":
+          window.location.href = "/company-admin";
+          return;
+
+        case "CANDIDATE":
+          window.location.href = "/candidate";
+          return;
+
+        default:
+          sessionStorage.clear();
+          throw new Error("Your account role is not recognized.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to log in");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="dashboard-shell">
-      <aside className="sidebar">
-        <div className="brand">
-          <div className="brand-icon">
-            <BriefcaseBusiness size={21} />
+    <main className="login-page">
+      <style>{`
+        .login-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%);
+          font-family: inherit;
+        }
+
+        .login-card {
+          width: 100%;
+          max-width: 420px;
+          padding: 40px 36px 28px;
+          background: #ffffff;
+          border-radius: 18px;
+          box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+          box-sizing: border-box;
+        }
+
+        .login-brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 28px;
+          font-size: 20px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .login-brand-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: #2563eb;
+          color: #ffffff;
+        }
+
+        .login-heading h1 {
+          margin: 0 0 6px;
+          font-size: 28px;
+          font-weight: 700;
+          color: #0f172a;
+        }
+
+        .login-heading p {
+          margin: 0 0 24px;
+          font-size: 14px;
+          color: #64748b;
+        }
+
+        .login-card label {
+          display: block;
+          margin: 16px 0 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .login-input {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          height: 46px;
+          padding: 0 14px;
+          border: 1px solid #dbe3f0;
+          border-radius: 10px;
+          background: #ffffff;
+          color: #64748b;
+          box-sizing: border-box;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .login-input:focus-within {
+          border-color: #2563eb;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .login-input input {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 14px;
+          color: #0f172a;
+        }
+
+        .password-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          width: 30px;
+          height: 30px;
+          padding: 0;
+          border: none;
+          border-radius: 6px;
+          background: transparent;
+          color: #64748b;
+          cursor: pointer;
+        }
+
+        .password-toggle:hover {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+
+        .forgot-password-wrapper {
+          display: flex;
+          justify-content: flex-end;
+          margin: 10px 0 20px;
+        }
+
+        .forgot-password-link {
+          color: #2563eb;
+          font-size: 13px;
+          font-weight: 600;
+          text-decoration: none;
+        }
+
+        .forgot-password-link:hover {
+          color: #1d4ed8;
+          text-decoration: underline;
+        }
+
+        .login-error {
+          margin: 0 0 14px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: #fef2f2;
+          color: #b91c1c;
+          font-size: 13px;
+        }
+
+        .login-submit {
+          width: 100%;
+          height: 46px;
+          border: none;
+          border-radius: 10px;
+          background: #2563eb;
+          color: #ffffff;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.2s ease;
+        }
+
+        .login-submit:hover {
+          background: #1d4ed8;
+        }
+
+        .login-submit:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .signup-section {
+          margin-top: 26px;
+        }
+
+        .signup-divider {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 16px;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .signup-divider::before,
+        .signup-divider::after {
+          content: "";
+          flex: 1;
+          height: 1px;
+          background: #e2e8f0;
+        }
+
+        .signup-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .signup-card {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+          padding: 12px;
+          border: 1px solid #dbe3f0;
+          border-radius: 10px;
+          background: #ffffff;
+          color: #1e293b;
+          text-decoration: none;
+          box-sizing: border-box;
+          transition: all 0.2s ease;
+        }
+
+        .signup-card:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+
+        .signup-card-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
+          border-radius: 8px;
+        }
+
+        .signup-card-text {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          min-width: 0;
+        }
+
+        .signup-card-text strong {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1e293b;
+        }
+
+        .signup-card-text small {
+          font-size: 11px;
+          color: #64748b;
+        }
+
+        .signup-card-candidate .signup-card-icon {
+          background: #eff6ff;
+          color: #2563eb;
+        }
+
+        .signup-card-candidate:hover {
+          border-color: #2563eb;
+        }
+
+        .signup-card-company .signup-card-icon {
+          background: #ecfdf5;
+          color: #059669;
+        }
+
+        .signup-card-company:hover {
+          border-color: #059669;
+        }
+
+        .login-footer {
+          margin: 24px 0 0;
+          text-align: center;
+          font-size: 12px;
+          color: #94a3b8;
+        }
+
+        @media (max-width: 420px) {
+          .signup-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <section className="login-card">
+        <div className="login-brand">
+          <div className="login-brand-icon">
+            <BriefcaseBusiness size={24} />
           </div>
           <span>CareerHub</span>
         </div>
 
-        <div className="sidebar-label">WORKSPACE</div>
-
-        <nav className="nav-list">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <a
-                key={item.label}
-                href="#"
-                className={`nav-link ${item.active ? "active" : ""}`}
-              >
-                <Icon size={18} />
-                {item.label}
-                {item.active && <ChevronRight size={15} />}
-              </a>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-label">PREFERENCES</div>
-
-        <nav className="nav-list">
-          <a href="#" className="nav-link">
-            <Settings size={18} />
-            Settings
-          </a>
-        </nav>
-
-        <div className="sidebar-bottom">
-          <div
-            style={{
-              padding: 16,
-              background: "#f3f5ff",
-              borderRadius: 13,
-            }}
-          >
-            <Sparkles size={20} color="#315efb" />
-            <p style={{ fontSize: 12, fontWeight: 800, margin: "12px 0 5px" }}>
-              Build your career
-            </p>
-            <p style={{ color: "#7b8498", fontSize: 10, lineHeight: 1.6 }}>
-              Keep your profile updated to discover better opportunities.
-            </p>
-          </div>
+        <div className="login-heading">
+          <h1>Welcome back</h1>
+          <p>Sign in to your CareerHub account.</p>
         </div>
-      </aside>
 
-      <main className="main-area">
-        <header className="topbar">
-          <div className="top-search">
-            <Search size={17} />
-            <input placeholder="Search jobs, companies..." />
+        <form onSubmit={handleLogin}>
+          <label>Email address</label>
+
+          <div className="login-input">
+            <Mail size={18} />
+            <input
+              type="email"
+              name="login-email"
+              autoComplete="off"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
 
-          <div className="topbar-right">
-            <button className="icon-button" aria-label="Notifications">
-              <Bell size={17} />
+          <label>Password</label>
+
+          <div className="login-input">
+            <LockKeyhole size={18} />
+
+            <input
+              type={showPassword ? "text" : "password"}
+              name="login-password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? (
+                <EyeOff size={19} />
+              ) : (
+                <Eye size={19} />
+              )}
             </button>
-
-            <div className="profile-mini">
-              <div className="avatar">SH</div>
-              <div className="profile-details">
-                <div style={{ fontSize: 12, fontWeight: 800 }}>Sazzad Hossain</div>
-                <div style={{ marginTop: 3, color: "#8992a4", fontSize: 10 }}>
-                  Candidate
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <div className="content">
-          <section className="welcome-banner">
-            <div className="welcome-content">
-              <h1>Welcome back, Sazzad! 👋</h1>
-              <p>
-                Your next opportunity could be just around the corner.
-                Explore new jobs, track your applications, and take the next
-                step in your career journey.
-              </p>
-
-              <button className="primary-light-button">
-                Explore opportunities
-                <ArrowRight size={15} />
-              </button>
-            </div>
-
-            <div className="welcome-art">
-              <GraduationCap size={55} strokeWidth={1.5} />
-            </div>
-          </section>
-
-          <div className="section-heading">
-            <div>
-              <h2>Application Overview</h2>
-              <p>Keep track of your job application progress.</p>
-            </div>
-            <a href="#" className="text-link">
-              View all <ArrowRight size={13} />
-            </a>
           </div>
 
-          <section className="stats-grid">
-            {stats.map((stat) => {
-              const Icon = stat.icon;
+          <div className="forgot-password-wrapper">
+            <Link href="/forgot-password" className="forgot-password-link">
+              Forgot Password?
+            </Link>
+          </div>
 
-              return (
-                <article className="stat-card" key={stat.label}>
-                  <div className="stat-top">
-                    <div
-                      className="stat-icon"
-                      style={{
-                        color: stat.color,
-                        background: stat.background,
-                      }}
-                    >
-                      <Icon size={20} />
-                    </div>
-                    <ChevronRight size={16} color="#aab2c0" />
-                  </div>
+          {error && <p className="login-error">{error}</p>}
 
-                  <div className="stat-number">{stat.value}</div>
-                  <div className="stat-label">{stat.label}</div>
-                  <p style={{ color: "#9aa2b2", fontSize: 10, marginBottom: 0 }}>
-                    {stat.note}
-                  </p>
-                </article>
-              );
-            })}
-          </section>
+          <button className="login-submit" disabled={loading}>
+            {loading ? "Signing in..." : "Sign in"}
+          </button>
+        </form>
 
-          <div className="dashboard-grid">
-            <section>
-              <div className="section-heading">
-                <div>
-                  <h2>Recommended Jobs</h2>
-                  <p>Opportunities you might be interested in.</p>
-                </div>
-                <a href="#" className="text-link">
-                  Explore all <ArrowRight size={13} />
-                </a>
-              </div>
+        <div className="signup-section">
+          <div className="signup-divider">
+            <span>New to CareerHub?</span>
+          </div>
 
-              <div className="panel">
-                <div className="job-list">
-                  {jobs.map((job) => (
-                    <article className="job-card" key={job.title}>
-                      <div
-                        className="company-logo"
-                        style={{ background: job.color }}
-                      >
-                        {job.company}
-                      </div>
+          <div className="signup-grid">
+            <Link
+              href="/signup/candidate"
+              className="signup-card signup-card-candidate"
+            >
+              <span className="signup-card-icon">
+                <UserPlus size={18} />
+              </span>
+              <span className="signup-card-text">
+                <strong>Sign UP</strong>
+              </span>
+            </Link>
 
-                      <div className="job-info">
-                        <h3>{job.title}</h3>
-                        <p>{job.companyName}</p>
-
-                        <div className="job-tags">
-                          <span className="job-tag">
-                            <MapPin size={11} />
-                            {job.location}
-                          </span>
-                          <span className="job-tag">{job.type}</span>
-                          <span className="job-tag">
-                            <Wallet size={11} />
-                            {job.salary}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        className="icon-button"
-                        aria-label={`View ${job.title}`}
-                      >
-                        <ArrowRight size={16} />
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section>
-              <div className="section-heading">
-                <div>
-                  <h2>Recent Activity</h2>
-                  <p>Your latest application updates.</p>
-                </div>
-                <a href="#" className="text-link">
-                  View all
-                </a>
-              </div>
-
-              <div className="panel">
-                <div className="activity-list">
-                  {activities.map((activity) => (
-                    <article className="activity-item" key={activity.title}>
-                      <div className="activity-dot">
-                        <Building2 size={16} />
-                      </div>
-
-                      <div>
-                        <h3>{activity.title}</h3>
-                        <p>{activity.company}</p>
-                        <p style={{ marginTop: 3 }}>
-                          <CalendarDays
-                            size={11}
-                            style={{
-                              display: "inline",
-                              verticalAlign: "middle",
-                              marginRight: 4,
-                            }}
-                          />
-                          {activity.date}
-                        </p>
-
-                        <span
-                          className={`status ${activity.status.toLowerCase()}`}
-                        >
-                          {activity.status}
-                        </span>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            </section>
+            <Link
+              href="/signup/company-admin"
+              className="signup-card signup-card-company"
+            >
+              <span className="signup-card-icon">
+                <Building2 size={18} />
+              </span>
+              <span className="signup-card-text">
+                <strong>Company Admin</strong>
+              </span>
+            </Link>
           </div>
         </div>
-      </main>
-    </div>
+
+        <p className="login-footer">CareerHub Account Portal</p>
+      </section>
+    </main>
   );
 }

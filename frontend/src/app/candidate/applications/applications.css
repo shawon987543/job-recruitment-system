@@ -1,0 +1,628 @@
+
+.my-applications-page {
+  min-height: 100vh;
+  padding: 38px 28px 60px;
+  background: #f6f8fc;
+  color: #172033;
+}
+
+.applications-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.applications-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.applications-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5367d8;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.applications-heading h1 {
+  margin: 0;
+  font-size: clamp(27px, 4vw, 36px);
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.applications-heading p {
+  color: #788397;
+  margin: 9px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.browse-jobs-button,
+.empty-browse-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 12px 18px;
+  background: #5367d8;
+  color: white;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: 0.2s ease;
+  white-space: nowrap;
+}
+
+.browse-jobs-button:hover,
+.empty-browse-button:hover {
+  background: #4054c4;
+  transform: translateY(-1px);
+}
+
+.application-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 17px;
+  margin-bottom: 27px;
+}
+
+.application-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 21px;
+  background: #ffffff;
+  border: 1px solid #e9edf5;
+  border-radius: 14px;
+  box-shadow: 0 3px 12px rgba(25, 39, 75, 0.035);
+}
+
+.application-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.total-icon {
+  color: #5367d8;
+  background: #edf0ff;
+}
+
+.pending-icon {
+  color: #c58a24;
+  background: #fff6e6;
+}
+
+.interview-icon {
+  color: #7c53c7;
+  background: #f3edff;
+}
+
+.selected-icon {
+  color: #19976a;
+  background: #e8f8f0;
+}
+
+.application-stat-card span {
+  display: block;
+  color: #7c879a;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.application-stat-card strong {
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.applications-content {
+  padding: 25px;
+  background: #ffffff;
+  border: 1px solid #e9edf5;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(25, 39, 75, 0.035);
+}
+
+.applications-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 22px;
+}
+
+.applications-toolbar h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.applications-toolbar p {
+  margin: 6px 0 0;
+  color: #8791a2;
+  font-size: 13px;
+}
+
+.applications-refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f1f3ff;
+  border: 1px solid #e2e6ff;
+  border-radius: 9px;
+  color: #5367d8;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.applications-refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.applications-search {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid #e5e9f1;
+  border-radius: 10px;
+  color: #9099a9;
+  margin-bottom: 20px;
+}
+
+.applications-search:focus-within {
+  border-color: #7888e6;
+  box-shadow: 0 0 0 3px rgba(83, 103, 216, 0.09);
+}
+
+.applications-search input {
+  width: 100%;
+  height: 100%;
+  outline: none;
+  border: none;
+  background: transparent;
+  color: #273249;
+  font-size: 14px;
+}
+
+.applications-search input::placeholder {
+  color: #a0a8b6;
+}
+
+.applications-filters {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.applications-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 13px;
+  border: 1px solid #e8ebf2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #707b8f;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.applications-filters button:hover {
+  border-color: #b8c1f5;
+  color: #5367d8;
+}
+
+.applications-filters button.active-filter {
+  background: #5367d8;
+  border-color: #5367d8;
+  color: #ffffff;
+}
+
+.applications-filters button span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.application-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 20px;
+}
+
+.application-card {
+  padding: 21px;
+  border: 1px solid #e9edf4;
+  border-radius: 13px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.application-card:hover {
+  border-color: #cbd2f7;
+  box-shadow: 0 5px 18px rgba(35, 49, 91, 0.045);
+}
+
+.application-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.application-job-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #eef0ff;
+  color: #5367d8;
+}
+
+.application-job-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.application-job-info h3 {
+  margin: 0 0 7px;
+  color: #202b40;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.application-job-company {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8993a4;
+  font-size: 12px;
+}
+
+.application-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.status-pending {
+  background: #fff5df;
+  color: #ad7517;
+}
+
+.status-shortlisted {
+  background: #e9f1ff;
+  color: #3469c4;
+}
+
+.status-interview {
+  background: #f2eaff;
+  color: #8051bf;
+}
+
+.status-selected {
+  background: #e5f7ed;
+  color: #178553;
+}
+
+.status-rejected {
+  background: #ffebeb;
+  color: #cb4545;
+}
+
+.status-withdrawn {
+  background: #edf0f4;
+  color: #687386;
+}
+
+.application-job-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 17px;
+  margin-top: 20px;
+  padding: 15px 0;
+  border-top: 1px solid #f0f2f6;
+  border-bottom: 1px solid #f0f2f6;
+}
+
+.application-job-meta span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #778297;
+  font-size: 12px;
+}
+
+.application-job-meta svg,
+.application-deadline svg {
+  color: #8995ab;
+}
+
+.application-deadline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+  color: #788397;
+  font-size: 12px;
+}
+
+.application-cover-letter {
+  margin-top: 15px;
+  padding: 13px;
+  background: #f8f9fc;
+  border-radius: 9px;
+}
+
+.application-cover-letter strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #566176;
+  font-size: 12px;
+}
+
+.application-cover-letter p {
+  margin: 0;
+  color: #798397;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.application-cv {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 13px;
+  color: #5367d8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.application-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-top: 18px;
+}
+
+.application-id {
+  color: #9aa3b2;
+  font-size: 11px;
+}
+
+.application-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.application-details-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5367d8;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.application-details-link:hover {
+  color: #3449ba;
+}
+
+.withdraw-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: 1px solid #f1d7d7;
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #c44b4b;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.withdraw-button:hover {
+  background: #ffebeb;
+}
+
+.withdraw-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.applications-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 35px 20px;
+  text-align: center;
+  color: #5367d8;
+}
+
+.applications-message h3 {
+  margin: 15px 0 7px;
+  color: #263249;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.applications-message p {
+  max-width: 420px;
+  margin: 0;
+  color: #8993a4;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.error-message {
+  color: #d05a5a;
+}
+
+.error-message button {
+  margin-top: 17px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #5367d8;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.empty-applications-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: #eef0ff;
+  color: #5367d8;
+}
+
+.empty-browse-button {
+  margin-top: 19px;
+  padding: 11px 17px;
+  font-size: 13px;
+}
+
+.spin-icon {
+  animation: applications-spin 1s linear infinite;
+}
+
+@keyframes applications-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .application-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .my-applications-page {
+    padding: 25px 14px 40px;
+  }
+
+  .applications-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .applications-content {
+    padding: 17px;
+  }
+
+  .application-stats {
+    gap: 10px;
+  }
+
+  .application-stat-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .application-stat-icon {
+    width: 39px;
+    height: 39px;
+  }
+
+  .application-stat-card strong {
+    font-size: 21px;
+  }
+
+  .application-stat-card span {
+    font-size: 10px;
+  }
+
+  .applications-toolbar {
+    align-items: flex-start;
+  }
+
+  .applications-filters {
+    gap: 7px;
+  }
+
+  .applications-filters button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  .application-card {
+    padding: 15px;
+  }
+
+  .application-card-top {
+    flex-wrap: wrap;
+  }
+
+  .application-job-info {
+    width: calc(100% - 65px);
+  }
+
+  .application-status {
+    margin-left: 62px;
+  }
+
+  .application-job-meta {
+    flex-direction: column;
+    gap: 11px;
+  }
+
+  .application-card-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .application-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

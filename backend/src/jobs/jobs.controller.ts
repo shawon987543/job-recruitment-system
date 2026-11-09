@@ -8,10 +8,10 @@ import {
   Patch,
   Post,
   UseGuards,
+  Query,
 } from '@nestjs/common';
-
+import { SearchJobsDto } from './dto/search-jobs.dto';
 import { JobsService } from './jobs.service';
-
 import { CreateJobDto } from './dto/create-job.dto';
 import { UpdateJobDto } from './dto/update-job.dto';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
@@ -142,11 +142,11 @@ export class JobsController {
   }
 
 
-  @Get()
-  findPublicJobs() {
-    return this.jobsService.findPublicJobs();
-  }
-
+    @Get()
+    findPublicJobs(@Query() filters: SearchJobsDto) {
+    return this.jobsService.findPublicJobs(filters);
+    }
+    
   // Public: View one published job
   @Get(':id')
   findPublicJobById(

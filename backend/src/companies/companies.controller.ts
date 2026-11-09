@@ -11,7 +11,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-
+import { RegisterCompanyAdminDto } from './dto/register-company-admin.dto';
 import { Put } from '@nestjs/common';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { UpdateCompanyStatusDto } from './dto/update-company-status.dto';
@@ -113,6 +113,15 @@ updateActiveStatus(
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterCompanyDto) {
     return this.companiesService.register(dto);
+  }
+
+    // Public: submit a Company Admin registration request.
+  @Post('register-admin')
+  @HttpCode(HttpStatus.CREATED)
+  registerCompanyAdmin(
+    @Body() dto: RegisterCompanyAdminDto,
+  ) {
+    return this.companiesService.registerCompanyAdmin(dto);
   }
 
   @Patch(':id/approve')

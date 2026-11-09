@@ -37,6 +37,20 @@ export class User {
   @Column({ type: 'varchar', nullable: true, select: false })
   refreshTokenHash: string | null;
 
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    select: false,
+  })
+  passwordResetTokenHash: string | null;
+
+  @Column({ 
+    type: 'timestamp with time zone', 
+    nullable: true 
+  })
+  passwordResetExpiresAt: Date | null;
+
   @Column({ type: 'int', nullable: true })
   companyId: number | null;
 

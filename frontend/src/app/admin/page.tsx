@@ -1,6 +1,4 @@
-
 "use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -239,11 +237,13 @@ export default function AdminPage() {
     <div className="admin-layout">
       <aside className={`admin-sidebar ${menuOpen ? "open" : ""}`}>
         <div className="admin-brand">
-          <div className="admin-brand-icon">C</div>
+          <div className="admin-brand-icon">
+            <BriefcaseBusiness size={23} />
+          </div>
 
-          <div>
+          <div className="admin-brand-text">
             <h2>CareerHub</h2>
-            <span>Admin Portal</span>
+            <p>SUPER-ADMIN PORTAL</p>
           </div>
 
           <button

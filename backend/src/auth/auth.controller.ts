@@ -7,61 +7,86 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+
+import { AuthService } from './auth.service';
+
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { Role } from '../common/enums/role.enum'
+import { Role } from '../common/enums/role.enum';
+
 import {
-CurrentUser,
+  CurrentUser,
   type AuthenticatedUser,
 } from '../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from './guards/jwt.auth.guard';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { AllowFirstLogin } from '../common/decorators/allow-first-login.decorator';
 
+import { JwtAuthGuard } from './guards/jwt.auth.guard';
+import { AllowFirstLogin } from '../common/decorators/allow-first-login.decorator';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-    @Post('Change-password')
-    @AllowFirstLogin()
-    @UseGuards(JwtAuthGuard)
-    @HttpCode(HttpStatus.OK)
-    ChangePassword(
-        @CurrentUser() user: AuthenticatedUser,
-        @Body() dto: ChangePasswordDto,
-    ){
-        return this.authService.ChangePassword(user.userId, dto);
-    }
-    
-    @Post('refresh')
-    @HttpCode(HttpStatus.OK)
-    refresh(@Body() dto: RefreshTokenDto){
-        return this.authService.refresh(dto.refreshToken);
-    }
+  /**
+   * Request a password reset email.
+   * Public endpoint.
+   */
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
 
-    @Post('logout')
-    @UseGuards(JwtAuthGuard)
-    @AllowFirstLogin()
-    @HttpCode(HttpStatus.OK)
-    logout(@CurrentUser() user: AuthenticatedUser){
-        return this.authService.logout(user.userId);
-    }
-    
-    @Get('admin-check')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.SUPER_ADMIN)
-    adminCheck(@CurrentUser() user: AuthenticatedUser){
-        return{
-            message: 'Super Admin access granted',
-            user,
-        };
-    }
+  /**
+   * Reset password using the email reset token.
+   * Public endpoint.
+   */
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
+  }
 
+  @Post('Change-password')
+  @AllowFirstLogin()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  ChangePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.ChangePassword(user.userId, dto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @AllowFirstLogin()
+  @HttpCode(HttpStatus.OK)
+  logout(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.logout(user.userId);
+  }
+
+  @Get('admin-check')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  adminCheck(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      message: 'Super Admin access granted',
+      user,
+    };
+  }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -77,12 +102,12 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  getProfile(@CurrentUser() user: AuthenticatedUser){
-    return{
-        id: user.userId,
-        email: user.email,
-        role: user.role,
-        companyId: user.companyId,
-    }
+  getProfile(@CurrentUser() user: AuthenticatedUser) {
+    return {
+      id: user.userId,
+      email: user.email,
+      role: user.role,
+      companyId: user.companyId,
+    };
   }
 }

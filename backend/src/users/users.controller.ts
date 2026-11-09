@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
-
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SUPER_ADMIN)
@@ -27,10 +27,10 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // GET /api/users/company-admins
-@Get('company-admins')
-findAllCompanyAdmins() {
-  return this.usersService.findAllCompanyAdmins();
+  // GET /api/users/company-admin-requests
+  @Get('company-admin-requests')
+  findCompanyAdminRequests() {
+  return this.usersService.findCompanyAdminRequests();
 }
 
   // GET /api/users/:id
@@ -49,11 +49,14 @@ findAllCompanyAdmins() {
 }
 
   // PATCH /api/users/:id/active-status
-  @Patch(':id/active-status')
-  updateActiveStatus(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('isActive') isActive: boolean,
-  ) {
-    return this.usersService.updateActiveStatus(id, isActive);
-  }
+@Patch(':id/active-status')
+updateActiveStatus(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateUserStatusDto,
+) {
+  return this.usersService.updateActiveStatus(
+    id,
+    dto.isActive,
+  );
+    }
 }

@@ -10,7 +10,9 @@ import { MailModule } from './mail/mail.module';
 import { JobsModule } from './jobs/jobs.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { AdminModule } from './admin/admin.module';
-
+import { CompanyAdminModule } from './company-admin/company-admin.module';
+import { InterviewsModule } from './interviews/interviews.module';
+import { CandidateProfileModule } from './candidate-profile/candidate-profile.module';
 
 @Module({
   imports: [
@@ -35,6 +37,9 @@ import { AdminModule } from './admin/admin.module';
     JobsModule,
     ApplicationsModule,
     AdminModule,
+    CompanyAdminModule,
+    InterviewsModule,
+    CandidateProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -19,6 +19,11 @@ export class Company {
   @Column({ type: 'varchar', length: 200 })
   name: string;
 
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  adminName: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  adminEmail: string | null;
   @Column({ type: 'varchar', length: 255, unique: true })
   email: string;
 

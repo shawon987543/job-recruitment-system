@@ -29,6 +29,11 @@ import {
   UserCheck,
   UserX,
   ShieldCheck,
+  CheckCircle,
+  XCircle,
+  Mail,
+  Phone,
+  Globe,
 } from "lucide-react";
 
 const API_URL =
@@ -44,6 +49,20 @@ interface User {
   companyId: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface CompanyAdminRequest {
+  id: number;
+  name: string;
+  email: string;
+  adminName: string | null;
+  adminEmail: string | null;
+  contactPhone: string;
+  website?: string | null;
+  address?: string | null;
+  description?: string | null;
+  status: string;
+  createdAt: string;
 }
 
 type RoleFilter = "ALL" | User["role"];
@@ -62,6 +81,11 @@ interface ActionVariables {
 interface UpdateVariables {
   user: User;
   form: UserForm;
+}
+
+interface RejectVariables {
+  request: CompanyAdminRequest;
+  reason: string;
 }
 
 export default function UsersPage() {
@@ -244,6 +268,37 @@ export default function UsersPage() {
     retry: false,
   });
 
+  // Load pending Company Admin registration requests
+  const {
+    data: companyAdminRequests = [],
+    isLoading: isRequestsLoading,
+    isFetching: isRequestsFetching,
+    isError: isRequestsError,
+    error: requestsError,
+    refetch: loadCompanyAdminRequests,
+  } = useQuery<CompanyAdminRequest[]>({
+    queryKey: ["company-admin-requests"],
+
+    queryFn: async () => {
+      const response = await apiRequest(
+        "/users/company-admin-requests",
+      );
+
+      const result = await response.json().catch(() => []);
+
+      if (!response.ok) {
+        throw new Error(
+          result.message ||
+            "Unable to load Company Admin requests.",
+        );
+      }
+
+      return result as CompanyAdminRequest[];
+    },
+
+    retry: false,
+  });
+
   // Load one user's details when the details modal opens
   const {
     data: userDetails,
@@ -284,10 +339,16 @@ export default function UsersPage() {
     }, 4000);
   };
 
+  // Refresh both users and pending requests
   const refreshUsers = async () => {
-    await queryClient.invalidateQueries({
-      queryKey: ["users"],
-    });
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["users"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["company-admin-requests"],
+      }),
+    ]);
   };
 
   // Activate or deactivate a user
@@ -374,6 +435,134 @@ export default function UsersPage() {
       );
     },
   });
+
+  // Approve a Company Admin registration request
+  const approveMutation = useMutation({
+    mutationFn: async (request: CompanyAdminRequest) => {
+      const response = await apiRequest(
+        `/companies/${request.id}/approve`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Unable to approve the request.",
+        );
+      }
+
+      return result;
+    },
+
+    onSuccess: async (result) => {
+      showMessage(
+        result.message || "Company Admin request approved.",
+      );
+
+      if (result.emailSent === false) {
+        setError(
+          "The account was approved, but the temporary-password email could not be sent. Email delivery needs to be resolved.",
+        );
+      }
+
+      await refreshUsers();
+    },
+
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to approve the request.",
+      );
+    },
+  });
+
+  // Reject a Company Admin registration request
+  const rejectMutation = useMutation({
+    mutationFn: async ({
+      request,
+      reason,
+    }: RejectVariables) => {
+      const response = await apiRequest(
+        `/companies/${request.id}/reject`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ reason }),
+        },
+      );
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Unable to reject the request.",
+        );
+      }
+
+      return result;
+    },
+
+    onSuccess: async (result) => {
+      showMessage(
+        result.message || "Company Admin request rejected.",
+      );
+
+      await refreshUsers();
+    },
+
+    onError: (err) => {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to reject the request.",
+      );
+    },
+  });
+
+  // Approve request after confirmation
+  const handleApproveRequest = (
+    request: CompanyAdminRequest,
+  ) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to approve ${request.name} and create a Company Admin account for ${request.adminEmail}?`,
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setSuccess("");
+
+    approveMutation.mutate(request);
+  };
+
+  // Reject request after collecting a reason
+  const handleRejectRequest = (
+    request: CompanyAdminRequest,
+  ) => {
+    const reason = window.prompt(
+      `Enter the rejection reason for ${request.name}:`,
+    );
+
+    if (reason === null) return;
+
+    if (reason.trim().length < 5) {
+      setError(
+        "Rejection reason must be at least 5 characters.",
+      );
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+
+    rejectMutation.mutate({
+      request,
+      reason: reason.trim(),
+    });
+  };
 
   // Open details or edit modal
   const openModal = (type: ModalType, user: User) => {
@@ -495,6 +684,11 @@ export default function UsersPage() {
       ? usersError instanceof Error
         ? usersError.message
         : "Unable to load users."
+      : "") ||
+    (isRequestsError
+      ? requestsError instanceof Error
+        ? requestsError.message
+        : "Unable to load Company Admin requests."
       : "");
 
   const formatDate = (date: string) =>
@@ -506,6 +700,9 @@ export default function UsersPage() {
 
   const roleLabel = (role: User["role"]) =>
     role.replace("_", " ");
+
+  const isRequestActionPending =
+    approveMutation.isPending || rejectMutation.isPending;
 
   return (
     <div className="admin-layout">
@@ -560,7 +757,6 @@ export default function UsersPage() {
             <span>Users</span>
           </Link>
 
-          {/* Updated working navigation links */}
           <Link
             href="/admin/jobs"
             className="admin-nav-item"
@@ -644,15 +840,29 @@ export default function UsersPage() {
 
           <button
             className="admin-refresh"
-            onClick={() => loadUsers()}
-            disabled={isFetching}
+            onClick={() => {
+              void Promise.all([
+                loadUsers(),
+                loadCompanyAdminRequests(),
+              ]);
+            }}
+            disabled={
+              isFetching ||
+              isRequestsFetching
+            }
           >
             <RefreshCw
               size={16}
-              className={isFetching ? "animate-spin" : ""}
+              className={
+                isFetching || isRequestsFetching
+                  ? "animate-spin"
+                  : ""
+              }
             />
             <span>
-              {isFetching ? "Refreshing..." : "Refresh"}
+              {isFetching || isRequestsFetching
+                ? "Refreshing..."
+                : "Refresh"}
             </span>
           </button>
         </header>
@@ -757,7 +967,192 @@ export default function UsersPage() {
             </button>
           </div>
 
-          {/* Toolbar */}
+          {/* Pending Company Admin registration requests */}
+          {(roleFilter === "ALL" ||
+            roleFilter === "COMPANY_ADMIN") && (
+            <>
+              <div className="company-toolbar">
+                <div>
+                  <h2>
+                    Pending Company Admin Requests
+                  </h2>
+                  <p>
+                    {companyAdminRequests.length} pending
+                    registration request(s) awaiting review
+                  </p>
+                </div>
+
+                <button
+                  className="admin-refresh"
+                  onClick={() => loadCompanyAdminRequests()}
+                  disabled={isRequestsFetching}
+                >
+                  <RefreshCw
+                    size={16}
+                    className={
+                      isRequestsFetching
+                        ? "animate-spin"
+                        : ""
+                    }
+                  />
+                  <span>Refresh Requests</span>
+                </button>
+              </div>
+
+              <div className="company-table-card">
+                {isRequestsLoading ? (
+                  <div className="admin-loading">
+                    Loading Company Admin requests...
+                  </div>
+                ) : isRequestsError ? (
+                  <div className="company-empty">
+                    <XCircle size={35} />
+                    <h3>Unable to load requests</h3>
+                    <p>
+                      {requestsError instanceof Error
+                        ? requestsError.message
+                        : "Please try refreshing the page."}
+                    </p>
+                    <button
+                      className="admin-refresh"
+                      onClick={() => loadCompanyAdminRequests()}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                ) : companyAdminRequests.length === 0 ? (
+                  <div className="company-empty">
+                    <CheckCircle size={35} />
+                    <h3>No pending requests</h3>
+                    <p>
+                      There are currently no Company Admin
+                      registration requests waiting for approval.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="company-table-scroll">
+                    <table className="company-table">
+                      <thead>
+                        <tr>
+                          <th>Company</th>
+                          <th>Company Email</th>
+                          <th>Admin Information</th>
+                          <th>Contact</th>
+                          <th>Submitted</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {companyAdminRequests.map((request) => (
+                          <tr key={request.id}>
+                            <td>
+                              <div className="company-name-cell">
+                                <div className="company-table-avatar">
+                                  {request.name
+                                    .charAt(0)
+                                    .toUpperCase()}
+                                </div>
+
+                                <div>
+                                  <strong>{request.name}</strong>
+                                  <span>
+                                    Company ID: #{request.id}
+                                  </span>
+
+                                  {request.website && (
+                                    <span>
+                                      <Globe
+                                        size={12}
+                                        style={{
+                                          display: "inline",
+                                          marginRight: 4,
+                                        }}
+                                      />
+                                      {request.website}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            <td>
+                              <span>{request.email}</span>
+                            </td>
+
+                            <td>
+                              <div className="company-name-cell">
+                                <div>
+                                  <strong>
+                                    {request.adminName || "Not provided"}
+                                  </strong>
+                                  <span>
+                                    <Mail
+                                      size={12}
+                                      style={{
+                                        display: "inline",
+                                        marginRight: 4,
+                                      }}
+                                    />
+                                    {request.adminEmail || "No email"}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td>
+                              <span>
+                                <Phone
+                                  size={13}
+                                  style={{
+                                    display: "inline",
+                                    marginRight: 4,
+                                  }}
+                                />
+                                {request.contactPhone || "Not provided"}
+                              </span>
+                            </td>
+
+                            <td>
+                              {formatDate(request.createdAt)}
+                            </td>
+
+                            <td>
+                              <div className="company-actions">
+                                <button
+                                  className="approve"
+                                  title="Approve Company Admin request"
+                                  disabled={isRequestActionPending}
+                                  onClick={() =>
+                                    handleApproveRequest(request)
+                                  }
+                                >
+                                  <CheckCircle size={16} />
+                                </button>
+
+                                <button
+                                  className="reject"
+                                  title="Reject Company Admin request"
+                                  disabled={isRequestActionPending}
+                                  onClick={() =>
+                                    handleRejectRequest(request)
+                                  }
+                                >
+                                  <XCircle size={16} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* All users toolbar */}
           <div className="company-toolbar">
             <div>
               <h2>All Users</h2>
@@ -802,7 +1197,9 @@ export default function UsersPage() {
           {/* Users table */}
           <div className="company-table-card">
             {isLoading ? (
-              <div className="admin-loading">Loading users...</div>
+              <div className="admin-loading">
+                Loading users...
+              </div>
             ) : filteredUsers.length === 0 ? (
               <div className="company-empty">
                 <Users size={35} />
@@ -926,7 +1323,7 @@ export default function UsersPage() {
         </section>
       </main>
 
-      {/* Modal */}
+      {/* User details / edit modal */}
       {modal && selectedUser && (
         <div
           className="company-modal-backdrop"
