@@ -33,6 +33,12 @@ export class UsersController {
   return this.usersService.findCompanyAdminRequests();
 }
 
+// GET /api/users/company-admins
+  @Get('company-admins')
+  findCompanyAdmins() {
+    return this.usersService.findAllCompanyAdmins();
+  }
+
   // GET /api/users/:id
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {

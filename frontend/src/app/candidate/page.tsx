@@ -9,12 +9,10 @@ import {
   Bell,
   BriefcaseBusiness,
   FileText,
-  GraduationCap,
   LayoutDashboard,
   LogOut,
   Menu,
   Search,
-  Settings,
   Sparkles,
   UserRound,
   X,
@@ -159,15 +157,6 @@ export default function CandidateDashboard() {
           >
             <UserRound size={19} />
             <span>My Profile</span>
-          </Link>
-
-          <Link
-            href="/candidate/profile"
-            className="candidate-nav-link"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <GraduationCap size={19} />
-            <span>Education & Experience</span>
           </Link>
         </nav>
 
@@ -328,19 +317,8 @@ export default function CandidateDashboard() {
                 <ArrowRight className="candidate-action-arrow" size={19} />
               </Link>
 
-              <Link
-                href="/candidate/profile"
-                className="candidate-action-card action-orange"
-              >
-                <div className="candidate-action-icon">
-                  <GraduationCap size={23} />
-                </div>
-                <div className="candidate-action-text">
-                  <h3>Education & Experience</h3>
-                  <p>Showcase your academic and work background.</p>
-                </div>
-                <ArrowRight className="candidate-action-arrow" size={19} />
-              </Link>
+              {/* Removed the old Education & Experience dashboard card. */}
+              
             </div>
           </section>
 

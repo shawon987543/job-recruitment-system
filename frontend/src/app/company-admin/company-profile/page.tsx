@@ -331,15 +331,8 @@ export default function CompanyProfilePage() {
         </section>
 
         <div className="ca-profile-actions">
-          <button
-            type="button"
-            className="ca-profile-secondary-btn"
-            onClick={() => void loadProfile()}
-            disabled={saving}
-          >
-            <RefreshCw size={16} />
-            Reload
-          </button>
+          
+          {/**Refresh button */}
 
           <button
             type="submit"

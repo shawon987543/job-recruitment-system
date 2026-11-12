@@ -1,3 +1,5 @@
+import { redirect } from "next/dist/client/components/redirect";
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -67,9 +69,7 @@ async function handleUnauthorized(): Promise<string> {
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");
 
-    window.location.href = "/login";
-
-    throw new Error("Session expired. Please log in again.");
+    redirect("/login");
   }
 
   return newToken;

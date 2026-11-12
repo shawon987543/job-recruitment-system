@@ -1,6 +1,4 @@
-
 "use client";
-
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 
@@ -76,15 +74,15 @@ export default function CompanyAdminSignupPage() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            name: form.name.trim(),
-            email: form.email.trim(),
+            companyName: form.name.trim(),
+            companyEmail: form.email.trim(),
             adminName: form.adminName.trim(),
             adminEmail: form.adminEmail.trim(),
             contactPhone: form.contactPhone.trim(),
             website: form.website.trim() || undefined,
             address: form.address.trim() || undefined,
             description: form.description.trim() || undefined,
-          }),
+}),
         }
       );
 

@@ -12,6 +12,7 @@ import { Repository, Not, IsNull } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CompanyAdminApplication } from './entities/company-admin-application.entity';
 import { FindOptionsSelect } from 'typeorm';
 
 @Injectable()
@@ -22,11 +23,17 @@ export class UsersService {
 
   @InjectRepository(Company)
   private readonly companyRepository: Repository<Company>,
+
+  @InjectRepository(CompanyAdminApplication)
+  private readonly companyAdminApplicationRepository: Repository<CompanyAdminApplication>,
 ) {}
 
 // Get pending Company Admin registration requests
+// Get pending Company Admin registration requests
+// Includes both new company registrations and additional admin applications.
 async findCompanyAdminRequests() {
-  return this.companyRepository.find({
+  // Get new company registration requests.
+  const newCompanyRequests = await this.companyRepository.find({
     where: {
       status: CompanyStatus.PENDING,
       adminEmail: Not(IsNull()),
@@ -49,6 +56,73 @@ async findCompanyAdminRequests() {
       createdAt: 'DESC',
     },
   });
+
+  // Get pending additional admin applications.
+  const additionalApplications =
+    await this.companyAdminApplicationRepository.find({
+      where: {
+        status: 'PENDING',
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+  // Add company information to each additional admin application.
+  const additionalAdminRequests = await Promise.all(
+    additionalApplications.map(async (application) => {
+      const company = await this.companyRepository.findOne({
+        where: {
+          id: application.companyId,
+        },
+      });
+
+      if (!company) {
+        return null;
+      }
+
+      return {
+        id: application.id,
+        requestType: 'ADDITIONAL_ADMIN' as const,
+        companyId: company.id,
+        name: company.name,
+        email: company.email,
+        adminName: application.adminName,
+        adminEmail: application.adminEmail,
+        contactPhone: application.contactPhone,
+        website: company.website,
+        address: company.address,
+        description: company.description,
+        status: application.status,
+        createdAt: application.createdAt,
+      };
+    }),
+  );
+
+  // Identify new company requests.
+  const formattedNewCompanyRequests = newCompanyRequests.map(
+    (company) => ({
+      ...company,
+      requestType: 'NEW_COMPANY' as const,
+      companyId: company.id,
+    }),
+  );
+
+  // Remove applications whose company no longer exists.
+  const validAdditionalAdminRequests =
+    additionalAdminRequests.filter(
+      (request) => request !== null,
+    );
+
+  // Combine and sort both request types.
+  return [
+    ...formattedNewCompanyRequests,
+    ...validAdditionalAdminRequests,
+  ].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime(),
+  );
 }
   // Get all Company Admins
 async findAllCompanyAdmins() {

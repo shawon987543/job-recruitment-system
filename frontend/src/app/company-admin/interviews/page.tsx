@@ -392,18 +392,8 @@ export default function InterviewsPage() {
         </div>
 
         <div className="ca-interviews-heading-actions">
-          <button
-            type="button"
-            className="ca-interviews-refresh"
-            onClick={loadData}
-            disabled={loading}
-          >
-            <RefreshCw
-              size={17}
-              className={loading ? "ca-interviews-spinning" : ""}
-            />
-            Refresh
-          </button>
+          
+          {/**Refresh button */}
 
           <button
             type="button"

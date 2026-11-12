@@ -15,7 +15,9 @@ import {
   Calendar,
   Banknote,
 } from "lucide-react";
+
 import { apiRequest } from "@/lib/api";
+import Skeleton from "../../../components/ui/skeleton";
 
 type JobStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
 
@@ -65,7 +67,7 @@ const emptyForm: JobForm = {
   deadline: "",
 };
 
-
+/* Format date */
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString("en-US", {
     day: "numeric",
@@ -74,10 +76,12 @@ function formatDate(date: string) {
   });
 }
 
+/* Format salary */
 function formatSalary(min: number | null, max: number | null) {
   if (min == null && max == null) return "Negotiable";
 
-  const format = (value: number) => `৳${value.toLocaleString("en-BD")}`;
+  const format = (value: number) =>
+    `৳${value.toLocaleString("en-BD")}`;
 
   if (min != null && max != null) {
     return `${format(min)} - ${format(max)}`;
@@ -88,6 +92,7 @@ function formatSalary(min: number | null, max: number | null) {
   return `Up to ${format(max!)}`;
 }
 
+/* Job status class */
 function statusClass(status: JobStatus) {
   return {
     DRAFT: "jm-status-draft",
@@ -96,11 +101,182 @@ function statusClass(status: JobStatus) {
   }[status];
 }
 
+/* Welcome section skeleton */
+function JobWelcomeSkeleton() {
+  return (
+    <section className="jm-welcome">
+      <div style={{ flex: 1 }}>
+        <Skeleton variant="text" width={130} height={12} />
+
+        <div style={{ marginTop: 12 }}>
+          <Skeleton variant="text" width="55%" height={28} />
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <Skeleton variant="text" width="75%" height={14} />
+        </div>
+      </div>
+
+      <Skeleton
+        variant="rectangle"
+        width={150}
+        height={44}
+      />
+    </section>
+  );
+}
+
+/* Complete job management skeleton */
+function JobManagementSkeleton() {
+  return (
+    <>
+      {/* Statistics skeleton */}
+      <section className="jm-stats-grid">
+        {[1, 2, 3, 4].map((item) => (
+          <article className="jm-stat-card" key={item}>
+            <Skeleton
+              variant="rectangle"
+              width={48}
+              height={48}
+            />
+
+            <div style={{ flex: 1 }}>
+              <Skeleton variant="text" width="65%" />
+
+              <div style={{ marginTop: 10 }}>
+                <Skeleton
+                  variant="number"
+                  width={55}
+                  height={30}
+                />
+              </div>
+
+              <div style={{ marginTop: 8 }}>
+                <Skeleton variant="text" width="85%" />
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {/* Job list skeleton */}
+      <section className="jm-list-panel">
+        <div className="jm-list-heading">
+          <div style={{ flex: 1 }}>
+            <Skeleton
+              variant="text"
+              width="30%"
+              height={22}
+            />
+
+            <div style={{ marginTop: 9 }}>
+              <Skeleton variant="text" width="45%" />
+            </div>
+          </div>
+
+          <Skeleton
+            variant="rectangle"
+            width={75}
+            height={28}
+          />
+        </div>
+
+        {/* Search and filter skeleton */}
+        <div className="jm-toolbar">
+          <Skeleton
+            variant="rectangle"
+            width="65%"
+            height={42}
+          />
+
+          <Skeleton
+            variant="rectangle"
+            width="25%"
+            height={42}
+          />
+        </div>
+
+        {/* Job cards skeleton */}
+        <div className="jm-job-list">
+          {[1, 2, 3, 4].map((item) => (
+            <article className="jm-job-card" key={item}>
+              <div className="jm-job-main">
+                <Skeleton
+                  variant="rectangle"
+                  width={48}
+                  height={48}
+                />
+
+                <div
+                  className="jm-job-information"
+                  style={{ flex: 1 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 12,
+                    }}
+                  >
+                    <Skeleton
+                      variant="text"
+                      width="45%"
+                      height={20}
+                    />
+
+                    <Skeleton
+                      variant="rectangle"
+                      width={85}
+                      height={24}
+                    />
+                  </div>
+
+                  <div
+                    className="jm-job-meta"
+                    style={{ marginTop: 15 }}
+                  >
+                    <Skeleton variant="text" width={100} />
+                    <Skeleton variant="text" width={90} />
+                    <Skeleton variant="text" width={130} />
+                  </div>
+
+                  <div style={{ marginTop: 13 }}>
+                    <Skeleton variant="text" width="25%" />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                className="jm-job-actions"
+                style={{ alignItems: "center" }}
+              >
+                <Skeleton
+                  variant="rectangle"
+                  width={75}
+                  height={34}
+                />
+
+                <Skeleton
+                  variant="rectangle"
+                  width={90}
+                  height={34}
+                />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
 export default function JobManagementPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
 
@@ -111,10 +287,14 @@ export default function JobManagementPage() {
   const [actionId, setActionId] = useState<number | null>(null);
   const [formError, setFormError] = useState("");
 
+  /* Load jobs */
   const loadJobs = useCallback(async (isRefresh = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
 
       const data = await apiRequest("/jobs/mine");
 
@@ -126,7 +306,7 @@ export default function JobManagementPage() {
       setError("");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to load jobs.",
+        err instanceof Error ? err.message : "Unable to load jobs."
       );
     } finally {
       setLoading(false);
@@ -139,16 +319,24 @@ export default function JobManagementPage() {
     loadJobs();
   }, [loadJobs]);
 
+  /* Job statistics */
   const statistics = useMemo(
     () => ({
       total: jobs.length,
-      published: jobs.filter((job) => job.status === "PUBLISHED").length,
-      draft: jobs.filter((job) => job.status === "DRAFT").length,
-      closed: jobs.filter((job) => job.status === "CLOSED").length,
+      published: jobs.filter(
+        (job) => job.status === "PUBLISHED"
+      ).length,
+      draft: jobs.filter(
+        (job) => job.status === "DRAFT"
+      ).length,
+      closed: jobs.filter(
+        (job) => job.status === "CLOSED"
+      ).length,
     }),
-    [jobs],
+    [jobs]
   );
 
+  /* Search and filter */
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const matchesSearch =
@@ -162,7 +350,7 @@ export default function JobManagementPage() {
     });
   }, [jobs, search, filter]);
 
-
+  /* Create job modal */
   function openCreateModal() {
     setEditingJob(null);
     setForm(emptyForm);
@@ -170,6 +358,7 @@ export default function JobManagementPage() {
     setModalOpen(true);
   }
 
+  /* Edit job modal */
   function openEditModal(job: Job) {
     setEditingJob(job);
 
@@ -188,9 +377,10 @@ export default function JobManagementPage() {
     setModalOpen(true);
   }
 
+  /* Update form */
   function updateForm<K extends keyof JobForm>(
     field: K,
-    value: JobForm[K],
+    value: JobForm[K]
   ) {
     setForm((previous) => ({
       ...previous,
@@ -198,7 +388,10 @@ export default function JobManagementPage() {
     }));
   }
 
-  async function saveJob(event: React.FormEvent<HTMLFormElement>) {
+  /* Save job */
+  async function saveJob(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault();
     setFormError("");
 
@@ -213,15 +406,21 @@ export default function JobManagementPage() {
     }
 
     if (title.length > 200 || location.length > 200) {
-      setFormError("Title and location must not exceed 200 characters.");
+      setFormError(
+        "Title and location must not exceed 200 characters."
+      );
       return;
     }
 
     const salaryMin =
-      form.salaryMin.trim() === "" ? undefined : Number(form.salaryMin);
+      form.salaryMin.trim() === ""
+        ? undefined
+        : Number(form.salaryMin);
 
     const salaryMax =
-      form.salaryMax.trim() === "" ? undefined : Number(form.salaryMax);
+      form.salaryMax.trim() === ""
+        ? undefined
+        : Number(form.salaryMax);
 
     if (
       (salaryMin !== undefined &&
@@ -229,7 +428,9 @@ export default function JobManagementPage() {
       (salaryMax !== undefined &&
         (!Number.isInteger(salaryMax) || salaryMax < 0))
     ) {
-      setFormError("Salary must be a valid non-negative whole number.");
+      setFormError(
+        "Salary must be a valid non-negative whole number."
+      );
       return;
     }
 
@@ -238,7 +439,9 @@ export default function JobManagementPage() {
       salaryMax !== undefined &&
       salaryMin > salaryMax
     ) {
-      setFormError("Minimum salary cannot exceed maximum salary.");
+      setFormError(
+        "Minimum salary cannot exceed maximum salary."
+      );
       return;
     }
 
@@ -272,14 +475,18 @@ export default function JobManagementPage() {
       await loadJobs(true);
     } catch (err) {
       setFormError(
-        err instanceof Error ? err.message : "Unable to save job.",
+        err instanceof Error ? err.message : "Unable to save job."
       );
     } finally {
       setSaving(false);
     }
   }
 
-  async function changeStatus(job: Job, action: "publish" | "close") {
+  /* Publish or close job */
+  async function changeStatus(
+    job: Job,
+    action: "publish" | "close"
+  ) {
     const message =
       action === "publish"
         ? `Publish "${job.title}"?`
@@ -297,7 +504,7 @@ export default function JobManagementPage() {
       await loadJobs(true);
     } catch (err) {
       window.alert(
-        err instanceof Error ? err.message : "Unable to update job.",
+        err instanceof Error ? err.message : "Unable to update job."
       );
     } finally {
       setActionId(null);
@@ -307,262 +514,316 @@ export default function JobManagementPage() {
   return (
     <>
       <div className="ca-content jm-content">
-        <div className="jm-page-toolbar">
-          <button
-            className="ca-refresh-button"
-            onClick={() => loadJobs(true)}
-            disabled={refreshing}
-          >
-            <RefreshCw
-              size={17}
-              className={refreshing ? "ca-spinning" : ""}
-            />
-            <span>{refreshing ? "Refreshing" : "Refresh"}</span>
-          </button>
-        </div>
 
-        <section className="jm-welcome">
-          <div>
-            <span className="jm-eyebrow">COMPANY WORKSPACE</span>
-            <h2>Manage your job openings</h2>
-            <p>
-              Create new opportunities, manage existing vacancies and
-              find the right candidates for your company.
-            </p>
-          </div>
-
-          <button className="jm-create-button" onClick={openCreateModal}>
-            <Plus size={19} />
-            Create New Job
-          </button>
-        </section>
-
-          <section className="jm-stats-grid">
-            <article className="jm-stat-card">
-              <div className="jm-stat-icon jm-blue">
-                <BriefcaseBusiness size={22} />
-              </div>
-              <div>
-                <span>Total Jobs</span>
-                <h3>{statistics.total}</h3>
-                <p>All your job postings</p>
-              </div>
-            </article>
-
-            <article className="jm-stat-card">
-              <div className="jm-stat-icon jm-green">
-                <Send size={22} />
-              </div>
-              <div>
-                <span>Published</span>
-                <h3>{statistics.published}</h3>
-                <p>Visible to candidates</p>
-              </div>
-            </article>
-
-            <article className="jm-stat-card">
-              <div className="jm-stat-icon jm-orange">
-                <Clock size={22} />
-              </div>
-              <div>
-                <span>Drafts</span>
-                <h3>{statistics.draft}</h3>
-                <p>Not yet published</p>
-              </div>
-            </article>
-
-            <article className="jm-stat-card">
-              <div className="jm-stat-icon jm-gray">
-                <Lock size={22} />
-              </div>
-              <div>
-                <span>Closed</span>
-                <h3>{statistics.closed}</h3>
-                <p>Currently inactive</p>
-              </div>
-            </article>
-          </section>
-
-          <section className="jm-list-panel">
-            <div className="jm-list-heading">
-              <div>
-                <h2>Your Job Postings</h2>
-                <p>Manage and track your company&apos;s vacancies.</p>
-              </div>
-
-              <span className="jm-job-count">
-                {filteredJobs.length} jobs
+        {/* Welcome skeleton / real welcome section */}
+        {loading ? (
+          <JobWelcomeSkeleton />
+        ) : (
+          <section className="jm-welcome">
+            <div>
+              <span className="jm-eyebrow">
+                COMPANY WORKSPACE
               </span>
+
+              <h2>Manage your job openings</h2>
+
+              <p>
+                Create new opportunities, manage existing vacancies
+                and find the right candidates for your company.
+              </p>
             </div>
 
-            <div className="jm-toolbar">
-              <div className="jm-search">
-                <Search size={18} />
-                <input
-                  type="text"
-                  placeholder="Search by job title or location..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                />
-              </div>
+            <button
+              className="jm-create-button"
+              onClick={openCreateModal}
+            >
+              <Plus size={19} />
+              Create New Job
+            </button>
+          </section>
+        )}
 
-              <select
-                className="jm-filter"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                aria-label="Filter jobs by status"
-              >
-                <option value="ALL">All statuses</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PUBLISHED">Published</option>
-                <option value="CLOSED">Closed</option>
-              </select>
-            </div>
-
-            {loading ? (
-              <div className="jm-state">
-                <RefreshCw size={30} className="ca-loading-icon" />
-                <h3>Loading your jobs...</h3>
-                <p>Please wait while we fetch your job postings.</p>
-              </div>
-            ) : error ? (
-              <div className="jm-state">
-                <XCircle size={34} className="jm-error-icon" />
-                <h3>Unable to load jobs</h3>
-                <p>{error}</p>
-                <button
-                  className="jm-secondary-button"
-                  onClick={() => loadJobs()}
-                >
-                  <RefreshCw size={16} />
-                  Try Again
-                </button>
-              </div>
-            ) : filteredJobs.length === 0 ? (
-              <div className="jm-state">
-                <div className="jm-empty-icon">
-                  <BriefcaseBusiness size={30} />
+        {/* Statistics and job-list skeleton / real content */}
+        {loading ? (
+          <JobManagementSkeleton />
+        ) : (
+          <>
+            {/* Statistics */}
+            <section className="jm-stats-grid">
+              <article className="jm-stat-card">
+                <div className="jm-stat-icon jm-blue">
+                  <BriefcaseBusiness size={22} />
                 </div>
-                <h3>
-                  {jobs.length === 0
-                    ? "No jobs created yet"
-                    : "No matching jobs found"}
-                </h3>
-                <p>
-                  {jobs.length === 0
-                    ? "Create your first job posting to start attracting candidates."
-                    : "Try changing your search or status filter."}
-                </p>
-                {jobs.length === 0 && (
+
+                <div>
+                  <span>Total Jobs</span>
+                  <h3>{statistics.total}</h3>
+                  <p>All your job postings</p>
+                </div>
+              </article>
+
+              <article className="jm-stat-card">
+                <div className="jm-stat-icon jm-green">
+                  <Send size={22} />
+                </div>
+
+                <div>
+                  <span>Published</span>
+                  <h3>{statistics.published}</h3>
+                  <p>Visible to candidates</p>
+                </div>
+              </article>
+
+              <article className="jm-stat-card">
+                <div className="jm-stat-icon jm-orange">
+                  <Clock size={22} />
+                </div>
+
+                <div>
+                  <span>Drafts</span>
+                  <h3>{statistics.draft}</h3>
+                  <p>Not yet published</p>
+                </div>
+              </article>
+
+              <article className="jm-stat-card">
+                <div className="jm-stat-icon jm-gray">
+                  <Lock size={22} />
+                </div>
+
+                <div>
+                  <span>Closed</span>
+                  <h3>{statistics.closed}</h3>
+                  <p>Currently inactive</p>
+                </div>
+              </article>
+            </section>
+
+            {/* Job list */}
+            <section className="jm-list-panel">
+              <div className="jm-list-heading">
+                <div>
+                  <h2>Your Job Postings</h2>
+                  <p>
+                    Manage and track your company&apos;s vacancies.
+                  </p>
+                </div>
+
+                <span className="jm-job-count">
+                  {filteredJobs.length} jobs
+                </span>
+              </div>
+
+              {/* Search and filter */}
+              <div className="jm-toolbar">
+                <div className="jm-search">
+                  <Search size={18} />
+
+                  <input
+                    type="text"
+                    placeholder="Search by job title or location..."
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                  />
+                </div>
+
+                <select
+                  className="jm-filter"
+                  value={filter}
+                  onChange={(event) =>
+                    setFilter(event.target.value)
+                  }
+                  aria-label="Filter jobs by status"
+                >
+                  <option value="ALL">All statuses</option>
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                  <option value="CLOSED">Closed</option>
+                </select>
+              </div>
+
+              {/* Error state */}
+              {error ? (
+                <div className="jm-state">
+                  <div className="jm-empty-icon">
+                    <XCircle size={30} />
+                  </div>
+
+                  <h3>Unable to load jobs</h3>
+
+                  <p>{error}</p>
+
                   <button
                     className="jm-create-button"
-                    onClick={openCreateModal}
+                    onClick={() => loadJobs(true)}
+                    disabled={refreshing}
                   >
-                    <Plus size={17} />
-                    Create Your First Job
+                    <RefreshCw
+                      size={17}
+                      className={
+                        refreshing ? "ca-spinning" : ""
+                      }
+                    />
+                    {refreshing ? "Retrying..." : "Try Again"}
                   </button>
-                )}
-              </div>
-            ) : (
-              <div className="jm-job-list">
-                {filteredJobs.map((job) => (
-                  <article className="jm-job-card" key={job.id}>
-                    <div className="jm-job-main">
-                      <div className="jm-job-icon">
-                        <BriefcaseBusiness size={22} />
-                      </div>
+                </div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="jm-state">
+                  <div className="jm-empty-icon">
+                    <BriefcaseBusiness size={30} />
+                  </div>
 
-                      <div className="jm-job-information">
-                        <div className="jm-job-title-row">
-                          <h3>{job.title}</h3>
-                          <span className={`jm-status ${statusClass(job.status)}`}>
-                            {job.status}
-                          </span>
+                  <h3>
+                    {jobs.length === 0
+                      ? "No jobs created yet"
+                      : "No matching jobs found"}
+                  </h3>
+
+                  <p>
+                    {jobs.length === 0
+                      ? "Create your first job posting to start attracting candidates."
+                      : "Try changing your search or status filter."}
+                  </p>
+
+                  {jobs.length === 0 && (
+                    <button
+                      className="jm-create-button"
+                      onClick={openCreateModal}
+                    >
+                      <Plus size={17} />
+                      Create Your First Job
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="jm-job-list">
+                  {filteredJobs.map((job) => (
+                    <article
+                      className="jm-job-card"
+                      key={job.id}
+                    >
+                      <div className="jm-job-main">
+                        <div className="jm-job-icon">
+                          <BriefcaseBusiness size={22} />
                         </div>
 
-                        <div className="jm-job-meta">
-                          <span>
-                            <MapPin size={15} />
-                            {job.location}
-                          </span>
-                          <span>
-                            <Clock size={15} />
-                            {job.jobType.replace("_", " ")}
-                          </span>
-                          <span>
-                            <Banknote size={15} />
-                            {formatSalary(job.salaryMin, job.salaryMax)}
-                          </span>
-                          {job.deadline && (
-                            <span>
-                              <Calendar size={15} />
-                              Deadline: {formatDate(job.deadline)}
+                        <div className="jm-job-information">
+                          <div className="jm-job-title-row">
+                            <h3>{job.title}</h3>
+
+                            <span
+                              className={`jm-status ${statusClass(
+                                job.status
+                              )}`}
+                            >
+                              {job.status}
                             </span>
-                          )}
+                          </div>
+
+                          <div className="jm-job-meta">
+                            <span>
+                              <MapPin size={15} />
+                              {job.location}
+                            </span>
+
+                            <span>
+                              <Clock size={15} />
+                              {job.jobType.replace("_", " ")}
+                            </span>
+
+                            <span>
+                              <Banknote size={15} />
+                              {formatSalary(
+                                job.salaryMin,
+                                job.salaryMax
+                              )}
+                            </span>
+
+                            {job.deadline && (
+                              <span>
+                                <Calendar size={15} />
+                                Deadline: {formatDate(job.deadline)}
+                              </span>
+                            )}
+                          </div>
+
+                          <p className="jm-job-date">
+                            Posted {formatDate(job.createdAt)}
+                          </p>
                         </div>
-
-                        <p className="jm-job-date">
-                          Posted {formatDate(job.createdAt)}
-                        </p>
                       </div>
-                    </div>
 
-                    <div className="jm-job-actions">
-                      <button
-                        className="jm-action-button"
-                        onClick={() => openEditModal(job)}
-                        title="Edit job"
-                      >
-                        <Pencil size={16} />
-                        Edit
-                      </button>
-
-                      {job.status === "DRAFT" && (
+                      <div className="jm-job-actions">
                         <button
-                          className="jm-action-button jm-publish-action"
-                          disabled={actionId === job.id}
-                          onClick={() => changeStatus(job, "publish")}
+                          className="jm-action-button"
+                          onClick={() => openEditModal(job)}
+                          title="Edit job"
                         >
-                          <Send size={16} />
-                          Publish
+                          <Pencil size={16} />
+                          Edit
                         </button>
-                      )}
 
-                      {job.status === "PUBLISHED" && (
-                        <button
-                          className="jm-action-button jm-close-action"
-                          disabled={actionId === job.id}
-                          onClick={() => changeStatus(job, "close")}
-                        >
-                          <Lock size={16} />
-                          Close
-                        </button>
-                      )}
+                        {job.status === "DRAFT" && (
+                          <button
+                            className="jm-action-button jm-publish-action"
+                            disabled={actionId === job.id}
+                            onClick={() =>
+                              changeStatus(job, "publish")
+                            }
+                          >
+                            <Send size={16} />
+                            Publish
+                          </button>
+                        )}
 
-                      {actionId === job.id && (
-                        <RefreshCw
-                          size={17}
-                          className="ca-spinning"
-                        />
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+                        {job.status === "PUBLISHED" && (
+                          <button
+                            className="jm-action-button jm-close-action"
+                            disabled={actionId === job.id}
+                            onClick={() =>
+                              changeStatus(job, "close")
+                            }
+                          >
+                            <Lock size={16} />
+                            Close
+                          </button>
+                        )}
 
-          <footer className="ca-footer">
-            <span>© {new Date().getFullYear()} CareerHub</span>
-            <span>Company Recruitment Workspace</span>
-          </footer>
+                        {actionId === job.id && (
+                          <RefreshCw
+                            size={17}
+                            className="ca-spinning"
+                          />
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+
+        <footer className="ca-footer">
+          <span>
+            © {new Date().getFullYear()} CareerHub
+          </span>
+
+          <span>Company Recruitment Workspace</span>
+        </footer>
       </div>
 
+      {/* Create / Edit Job Modal */}
       {modalOpen && (
         <div
           className="jm-modal-overlay"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !saving) {
+            if (
+              event.target === event.currentTarget &&
+              !saving
+            ) {
               setModalOpen(false);
             }
           }}
@@ -578,9 +839,13 @@ export default function JobManagementPage() {
                 <span className="jm-eyebrow">
                   JOB MANAGEMENT
                 </span>
+
                 <h2 id="jm-modal-title">
-                  {editingJob ? "Edit Job Posting" : "Create New Job"}
+                  {editingJob
+                    ? "Edit Job Posting"
+                    : "Create New Job"}
                 </h2>
+
                 <p>
                   {editingJob
                     ? "Update the details of your job posting."
@@ -631,7 +896,10 @@ export default function JobManagementPage() {
                   <select
                     value={form.jobType}
                     onChange={(event) =>
-                      updateForm("jobType", event.target.value as JobType)
+                      updateForm(
+                        "jobType",
+                        event.target.value as JobType
+                      )
                     }
                   >
                     <option value="FULL_TIME">Full Time</option>
@@ -702,7 +970,10 @@ export default function JobManagementPage() {
                     placeholder="List the skills and qualifications required..."
                     value={form.requirements}
                     onChange={(event) =>
-                      updateForm("requirements", event.target.value)
+                      updateForm(
+                        "requirements",
+                        event.target.value
+                      )
                     }
                   />
                 </label>
@@ -732,13 +1003,18 @@ export default function JobManagementPage() {
                 >
                   {saving ? (
                     <>
-                      <RefreshCw size={17} className="ca-spinning" />
+                      <RefreshCw
+                        size={17}
+                        className="ca-spinning"
+                      />
                       Saving...
                     </>
                   ) : (
                     <>
                       <Plus size={17} />
-                      {editingJob ? "Save Changes" : "Create Job"}
+                      {editingJob
+                        ? "Save Changes"
+                        : "Create Job"}
                     </>
                   )}
                 </button>
@@ -747,7 +1023,6 @@ export default function JobManagementPage() {
           </div>
         </div>
       )}
-
     </>
   );
 }

@@ -228,17 +228,10 @@ export default function CompanyApplicationsPage() {
               </p>
             </div>
 
-            <button
-              className="ap-refresh-button"
-              onClick={loadApplications}
-              disabled={loading}
-            >
-              <RefreshCw
-                size={16}
-                className={loading ? "ap-spinning" : ""}
-              />
-              Refresh
-            </button>
+          
+            {/**?Refresh button */}
+
+            
           </section>
 
           {/* Error message */}

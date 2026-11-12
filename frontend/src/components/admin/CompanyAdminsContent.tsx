@@ -6,8 +6,7 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-
-import { apiRequest } from '../../../lib/api';
+import { apiRequest } from "@/lib/api";
 
 type CompanyAdmin = {
   id: number;
@@ -28,7 +27,7 @@ type AdminForm = {
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
-export default function CompanyAdminsPage() {
+export default function CompanyAdminsContent() {
   const [admins, setAdmins] = useState<CompanyAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -219,8 +218,8 @@ export default function CompanyAdminsPage() {
       .join('');
 
   return (
-    <main className="min-h-screen bg-[#f4f7fb] p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl space-y-7">
+    <div className="w-full min-w-0 pb-8">
+    <div className="w-full min-w-0 space-y-6">
 
         {/* Header */}
         <section className="relative overflow-hidden rounded-3xl bg-linear-to-r from-[#101d3b] via-[#17356b] to-[#2563a9] p-6 text-white shadow-xl shadow-blue-950/10 sm:p-9">
@@ -244,15 +243,7 @@ export default function CompanyAdminsPage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => void fetchAdmins()}
-              disabled={loading}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white shadow-lg backdrop-blur transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span className="text-lg">↻</span>
-              {loading ? 'Refreshing...' : 'Refresh Data'}
-            </button>
+            
           </div>
         </section>
 
@@ -711,7 +702,7 @@ export default function CompanyAdminsPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }
 

@@ -1,6 +1,4 @@
-
 "use client";
-
 import { useEffect, useState } from "react";
 import {
   BriefcaseBusiness,
@@ -10,11 +8,12 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  RefreshCw,
   ArrowUpRight,
   UserRound,
 } from "lucide-react";
+
 import { apiRequest } from "@/lib/api";
+import Skeleton from "@/components/ui/skeleton";
 
 interface DashboardData {
   jobs: {
@@ -63,20 +62,235 @@ function getStatusClass(status: string) {
   return statusClasses[status] || "ca-status-pending";
 }
 
+// Dashboard skeleton loading component
+function DashboardSkeleton() {
+  return (
+    <div className="ca-content ca-skeleton-content">
+      {/* Welcome skeleton */}
+      <section className="ca-welcome">
+        <div className="ca-welcome-content">
+          <Skeleton width="150px" height={12} />
+
+          <div style={{ marginTop: 16 }}>
+            <Skeleton width="260px" height={30} />
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <Skeleton width="90%" height={12} />
+          </div>
+
+          <div style={{ marginTop: 10 }}>
+            <Skeleton width="75%" height={12} />
+          </div>
+        </div>
+
+        <div className="ca-welcome-illustration">
+          <Skeleton variant="circle" width={75} height={75} />
+          <Skeleton width="130px" height={12} />
+        </div>
+      </section>
+
+      {/* Section heading skeleton */}
+      <section className="ca-section-heading">
+        <div style={{ width: "100%" }}>
+          <Skeleton width="190px" height={22} />
+          <div style={{ marginTop: 12 }}>
+            <Skeleton width="240px" height={12} />
+          </div>
+        </div>
+      </section>
+
+      {/* Statistics skeleton */}
+      <section className="ca-stats-grid">
+        {[1, 2, 3, 4].map((item) => (
+          <article className="ca-stat-card" key={item}>
+            <Skeleton
+              variant="rectangle"
+              width={45}
+              height={45}
+            />
+
+            <div
+              className="ca-stat-information"
+              style={{ width: "100%" }}
+            >
+              <Skeleton width="75%" height={12} />
+
+              <div style={{ marginTop: 12 }}>
+                <Skeleton variant="number" width={65} height={28} />
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <Skeleton width="90%" height={10} />
+              </div>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      {/* Job postings and hiring pipeline skeleton */}
+      <section className="ca-main-grid">
+        <article className="ca-panel ca-jobs-panel">
+          <div className="ca-panel-heading">
+            <div style={{ flex: 1 }}>
+              <Skeleton width="140px" height={19} />
+              <div style={{ marginTop: 10 }}>
+                <Skeleton width="190px" height={11} />
+              </div>
+            </div>
+
+            <Skeleton variant="circle" width={40} height={40} />
+          </div>
+
+          <div className="ca-job-total">
+            <div style={{ flex: 1 }}>
+              <Skeleton width="130px" height={12} />
+              <div style={{ marginTop: 12 }}>
+                <Skeleton variant="number" width={65} height={30} />
+              </div>
+            </div>
+
+            <Skeleton variant="rectangle" width={45} height={45} />
+          </div>
+
+          <div className="ca-job-breakdown">
+            {[1, 2, 3].map((item) => (
+              <div className="ca-breakdown-row" key={item}>
+                <Skeleton width="85px" height={13} />
+                <Skeleton width="30px" height={16} />
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="ca-panel ca-pipeline-panel">
+          <div className="ca-panel-heading">
+            <div style={{ flex: 1 }}>
+              <Skeleton width="140px" height={19} />
+              <div style={{ marginTop: 10 }}>
+                <Skeleton width="180px" height={11} />
+              </div>
+            </div>
+
+            <Skeleton variant="circle" width={40} height={40} />
+          </div>
+
+          <div className="ca-pipeline-total">
+            <Skeleton variant="number" width={70} height={32} />
+            <div style={{ marginTop: 8 }}>
+              <Skeleton width="170px" height={12} />
+            </div>
+          </div>
+
+          <div className="ca-pipeline-list">
+            {[1, 2, 3, 4, 5, 6].map((item) => (
+              <div className="ca-pipeline-row" key={item}>
+                <Skeleton width="85px" height={12} />
+                <div style={{ flex: 1 }}>
+                  <Skeleton width="100%" height={9} />
+                </div>
+                <Skeleton width="25px" height={13} />
+              </div>
+            ))}
+          </div>
+        </article>
+      </section>
+
+      {/* Recent applications table skeleton */}
+      <section className="ca-panel ca-recent-panel">
+        <div className="ca-panel-heading ca-recent-heading">
+          <div style={{ flex: 1 }}>
+            <Skeleton width="175px" height={20} />
+
+            <div style={{ marginTop: 10 }}>
+              <Skeleton width="260px" height={12} />
+            </div>
+          </div>
+
+          <Skeleton variant="circle" width={40} height={40} />
+        </div>
+
+        <div className="ca-table-wrapper">
+          <table className="ca-table">
+            
+              <thead>
+                <tr>
+                  <th>
+                    <Skeleton width="85px" height={13} />
+                  </th>
+                  <th>
+                    <Skeleton width="95px" height={13} />
+                  </th>
+                  <th>
+                    <Skeleton width="55px" height={13} />
+                  </th>
+                  <th>
+                    <Skeleton width="90px" height={13} />
+                  </th>
+                </tr>
+              </thead>
+
+
+            <tbody>
+              {[1, 2, 3, 4].map((item) => (
+                <tr key={item}>
+                  <td>
+                    <div className="ca-candidate-cell">
+                      <Skeleton
+                        variant="circle"
+                        width={36}
+                        height={36}
+                      />
+
+                      <div style={{ flex: 1 }}>
+                        <Skeleton width="110px" height={12} />
+                        <div style={{ marginTop: 8 }}>
+                          <Skeleton width="140px" height={10} />
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <Skeleton width="120px" height={12} />
+                  </td>
+
+                  <td>
+                    <Skeleton
+                      variant="rectangle"
+                      width={85}
+                      height={24}
+                    />
+                  </td>
+
+                  <td>
+                    <Skeleton width="90px" height={12} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Footer skeleton */}
+      <footer className="ca-footer">
+        <Skeleton width="110px" height={11} />
+        <Skeleton width="190px" height={11} />
+      </footer>
+    </div>
+  );
+}
+
 export default function CompanyAdminDashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
   const [adminName, setAdminName] = useState("Company Admin");
 
-  async function loadDashboard(isRefresh = false) {
+  async function loadDashboard() {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      setLoading(true);
 
       const data = await apiRequest("/company-admin/dashboard");
 
@@ -88,7 +302,6 @@ export default function CompanyAdminDashboard() {
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }
 
@@ -179,14 +392,9 @@ export default function CompanyAdminDashboard() {
       ]
     : [];
 
+  // Show dashboard skeleton while loading
   if (loading) {
-    return (
-      <main className="ca-state-screen">
-        <RefreshCw size={30} className="ca-loading-icon" />
-        <h2>Loading your workspace</h2>
-        <p>Please wait while we prepare your dashboard.</p>
-      </main>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (error || !dashboard) {
@@ -203,9 +411,9 @@ export default function CompanyAdminDashboard() {
 
           <button
             className="ca-primary-button"
-            onClick={() => loadDashboard()}
+            onClick={loadDashboard}
           >
-            <RefreshCw size={16} />
+             
             Try Again
           </button>
         </div>
@@ -215,26 +423,13 @@ export default function CompanyAdminDashboard() {
 
   return (
     <div className="ca-content">
-      {/* Dashboard refresh button */}
-<div className="ca-dashboard-toolbar">
-  <button
-    className="ca-refresh-button"
-    onClick={() => loadDashboard(true)}
-    disabled={refreshing}
-    title="Refresh dashboard"
-  >
-    <RefreshCw
-      size={17}
-      className={refreshing ? "ca-spinning" : ""}
-    />
-    <span>{refreshing ? "Refreshing" : "Refresh"}</span>
-  </button>
-</div>
 
       {/* Welcome section */}
       <section className="ca-welcome">
         <div className="ca-welcome-content">
-          <span className="ca-welcome-label">COMPANY WORKSPACE</span>
+          <span className="ca-welcome-label">
+            COMPANY WORKSPACE
+          </span>
 
           <h2>Welcome back, {adminName}!</h2>
 

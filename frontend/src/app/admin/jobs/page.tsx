@@ -1,6 +1,4 @@
-
 "use client";
-
 import { useCallback, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -9,16 +7,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import AdminSidebar from "../../../components/admin/AdminSidebar";
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  BriefcaseBusiness,
-  FileText,
-  BarChart3,
-  Settings,
-  LogOut,
   Search,
   RefreshCw,
   Eye,
@@ -28,6 +18,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  BriefcaseBusiness,
 } from "lucide-react";
 
 const API_URL =
@@ -252,7 +243,6 @@ export default function JobsPage() {
         throw new Error("You are not authorized to view jobs.");
       }
 
-      // apiRequest handles missing and expired access tokens.
       const response = await apiRequest("/jobs/admin/all");
       const result = await response.json();
 
@@ -464,26 +454,6 @@ export default function JobsPage() {
     });
   };
 
-  const logout = async () => {
-    const token = sessionStorage.getItem("access_token");
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Clear local session even if logout fails.
-    } finally {
-      clearSession();
-      router.push("/login");
-    }
-  };
-
   const filteredJobs = useMemo(() => {
     const searchTerm = search.toLowerCase();
 
@@ -545,118 +515,10 @@ export default function JobsPage() {
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside
-        className={`admin-sidebar ${menuOpen ? "open" : ""}`}
-      >
-        <div className="admin-brand">
-          <div className="admin-brand-icon">C</div>
-
-          <div>
-            <h2>CareerHub</h2>
-            <span>Admin Portal</span>
-          </div>
-
-          <button
-            className="admin-close-menu"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="admin-nav-label">MENU</div>
-
-        <nav className="admin-navigation">
-          <Link
-            href="/admin"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <LayoutDashboard size={19} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link
-            href="/admin/companies"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Building2 size={19} />
-            <span>Companies</span>
-          </Link>
-
-          <Link
-            href="/admin/users"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Users size={19} />
-            <span>Users</span>
-          </Link>
-
-          <Link
-            href="/admin/jobs"
-            className="admin-nav-item active"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BriefcaseBusiness size={19} />
-            <span>Jobs</span>
-          </Link>
-
-          <Link
-            href="/admin/applications"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <FileText size={19} />
-            <span>Applications</span>
-          </Link>
-
-          <Link
-            href="/admin/reports"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BarChart3 size={19} />
-            <span>Reports</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Settings size={19} />
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="admin-sidebar-bottom">
-          <div className="admin-profile">
-            <div className="admin-avatar">SA</div>
-
-            <div className="admin-profile-info">
-              <strong>Super Admin</strong>
-              <span>Administrator</span>
-            </div>
-          </div>
-
-          <button className="admin-logout" onClick={logout}>
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {menuOpen && (
-        <button
-          className="admin-overlay"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
-      )}
+      <AdminSidebar
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
 
       {/* Main content */}
       <main className="admin-main">
@@ -676,17 +538,6 @@ export default function JobsPage() {
             </p>
           </div>
 
-          <button
-            className="admin-refresh"
-            onClick={() => refetch()}
-            disabled={isFetching}
-          >
-            <RefreshCw
-              size={16}
-              className={isFetching ? "animate-spin" : ""}
-            />
-            <span>{isFetching ? "Refreshing..." : "Refresh"}</span>
-          </button>
         </header>
 
         <section className="admin-content">

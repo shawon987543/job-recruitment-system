@@ -2,25 +2,20 @@
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
-  LayoutDashboard,
-  Building2,
   Users,
+  Building2,
   BriefcaseBusiness,
   FileText,
   BarChart3,
-  Settings,
-  LogOut,
-  RefreshCw,
   X,
   Menu,
   TrendingUp,
 } from "lucide-react";
+import AdminSidebar from "../../../components/admin/AdminSidebar";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-
 
 interface DashboardStats {
   users: {
@@ -72,7 +67,12 @@ interface CompanyPerformanceItem {
   email: string;
   status: string;
   isActive: boolean;
-  jobs: { total: number; published: number; draft: number; closed: number };
+  jobs: {
+    total: number;
+    published: number;
+    draft: number;
+    closed: number;
+  };
   applications: {
     total: number;
     pending: number;
@@ -104,8 +104,6 @@ interface FilteredReports {
   jobs: number;
   applications: number;
 }
-
-// internal data
 
 const initialStats: DashboardStats = {
   users: {
@@ -139,7 +137,7 @@ const initialStats: DashboardStats = {
   },
 };
 
-// monthly chat component
+// MONTHLY CHART COMPONENT
 
 function MonthlyChart({
   title,
@@ -168,12 +166,7 @@ function MonthlyChart({
 
   const formatMonth = (month: string) => {
     const [year, monthNumber] = month.split("-");
-
-    const date = new Date(
-      Number(year),
-      Number(monthNumber) - 1,
-      1,
-    );
+    const date = new Date(Number(year), Number(monthNumber) - 1, 1);
 
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -201,9 +194,8 @@ function MonthlyChart({
     .map((point) => `${point.x},${point.y}`)
     .join(" ");
 
-  const barSlotWidth = data.length > 0
-    ? chartWidth / data.length
-    : chartWidth;
+  const barSlotWidth =
+    data.length > 0 ? chartWidth / data.length : chartWidth;
 
   return (
     <div
@@ -261,14 +253,9 @@ function MonthlyChart({
               display: "block",
             }}
           >
-            {/* Horizontal grid lines */}
-
             {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
               const y = top + chartHeight * ratio;
-
-              const value = Math.round(
-                maxValue * (1 - ratio),
-              );
+              const value = Math.round(maxValue * (1 - ratio));
 
               return (
                 <g key={ratio}>
@@ -293,8 +280,6 @@ function MonthlyChart({
                 </g>
               );
             })}
-
-            {/* Line chart */}
 
             {type === "line" && points.length > 0 && (
               <>
@@ -333,15 +318,9 @@ function MonthlyChart({
               </>
             )}
 
-            {/* Bar chart */}
-
             {type === "bar" &&
-              points.map((point) => {
-                const barWidth = Math.min(
-                  28,
-                  barSlotWidth * 0.55,
-                );
-
+              points.map((point, index) => {
+                const barWidth = Math.min(28, barSlotWidth * 0.55);
                 const barHeight =
                   (point.count / maxValue) * chartHeight;
 
@@ -350,7 +329,7 @@ function MonthlyChart({
                     key={point.month}
                     x={
                       left +
-                      points.indexOf(point) * barSlotWidth +
+                      index * barSlotWidth +
                       barSlotWidth / 2 -
                       barWidth / 2
                     }
@@ -366,8 +345,6 @@ function MonthlyChart({
                   </rect>
                 );
               })}
-
-            {/* Month labels */}
 
             {points.map((point, index) => {
               const x =
@@ -410,14 +387,13 @@ function MonthlyChart({
             background: color,
           }}
         />
-
         Monthly total
       </div>
     </div>
   );
 }
 
-// main report page
+// MAIN REPORT PAGE
 
 export default function ReportsPage() {
   const router = useRouter();
@@ -430,13 +406,12 @@ export default function ReportsPage() {
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
 
-// serssion managment
+  // SESSION MANAGEMENT
 
   const clearSession = useCallback(() => {
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");
-
     queryClient.clear();
   }, [queryClient]);
 
@@ -446,10 +421,7 @@ export default function ReportsPage() {
     if (!refreshToken) {
       clearSession();
       router.replace("/login");
-
-      throw new Error(
-        "Your session has expired. Please log in again.",
-      );
+      throw new Error("Your session has expired. Please log in again.");
     }
 
     const response = await fetch(`${API_URL}/auth/refresh`, {
@@ -464,33 +436,19 @@ export default function ReportsPage() {
     if (!response.ok) {
       clearSession();
       router.replace("/login");
-
-      throw new Error(
-        "Your session has expired. Please log in again.",
-      );
+      throw new Error("Your session has expired. Please log in again.");
     }
 
     const refreshed: RefreshResponse = await response.json();
 
-    if (
-      !refreshed.access_token ||
-      !refreshed.refresh_token
-    ) {
+    if (!refreshed.access_token || !refreshed.refresh_token) {
       clearSession();
       router.replace("/login");
-
       throw new Error("Unable to refresh your session.");
     }
 
-    sessionStorage.setItem(
-      "access_token",
-      refreshed.access_token,
-    );
-
-    sessionStorage.setItem(
-      "refresh_token",
-      refreshed.refresh_token,
-    );
+    sessionStorage.setItem("access_token", refreshed.access_token);
+    sessionStorage.setItem("refresh_token", refreshed.refresh_token);
 
     return refreshed.access_token;
   }, [clearSession, router]);
@@ -522,16 +480,11 @@ export default function ReportsPage() {
       if (response.status === 401) {
         clearSession();
         router.replace("/login");
-
-        throw new Error(
-          "Your session has expired. Please log in again.",
-        );
+        throw new Error("Your session has expired. Please log in again.");
       }
 
       if (response.status === 403) {
-        throw new Error(
-          "You are not authorized to view reports.",
-        );
+        throw new Error("You are not authorized to view reports.");
       }
 
       return response;
@@ -539,7 +492,7 @@ export default function ReportsPage() {
     [clearSession, refreshAccessToken, router],
   );
 
- //dashboard static querey
+  // DASHBOARD STATISTICS QUERY
 
   const {
     data: stats = initialStats,
@@ -550,14 +503,12 @@ export default function ReportsPage() {
     refetch,
   } = useQuery<DashboardStats>({
     queryKey: ["admin-reports"],
-
     queryFn: async () => {
       const userData = sessionStorage.getItem("user");
 
       if (!userData) {
         clearSession();
         router.replace("/login");
-
         throw new Error("Please log in again.");
       }
 
@@ -568,18 +519,12 @@ export default function ReportsPage() {
       } catch {
         clearSession();
         router.replace("/login");
-
-        throw new Error(
-          "Invalid session. Please log in again.",
-        );
+        throw new Error("Invalid session. Please log in again.");
       }
 
       if (user.role !== "SUPER_ADMIN") {
         router.replace("/");
-
-        throw new Error(
-          "You are not authorized to view reports.",
-        );
+        throw new Error("You are not authorized to view reports.");
       }
 
       const response = await apiRequest("/admin/dashboard");
@@ -599,18 +544,15 @@ export default function ReportsPage() {
         !result.jobs ||
         !result.applications
       ) {
-        throw new Error(
-          "Invalid dashboard statistics response.",
-        );
+        throw new Error("Invalid dashboard statistics response.");
       }
 
       return result as DashboardStats;
     },
-
     retry: false,
   });
 
-  // ==================== MONTHLY ANALYTICS QUERY ====================
+  // MONTHLY ANALYTICS QUERY
 
   const {
     data: monthlyAnalytics,
@@ -620,20 +562,15 @@ export default function ReportsPage() {
     refetch: refetchMonthly,
   } = useQuery<MonthlyAnalytics>({
     queryKey: ["admin-monthly-analytics"],
-
     queryFn: async () => {
-      const response = await apiRequest(
-        "/admin/monthly-analytics",
-      );
-
+      const response = await apiRequest("/admin/monthly-analytics");
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(
           Array.isArray(result.message)
             ? result.message.join(", ")
-            : result.message ||
-                "Unable to load monthly analytics.",
+            : result.message || "Unable to load monthly analytics.",
         );
       }
 
@@ -642,18 +579,15 @@ export default function ReportsPage() {
         !Array.isArray(result.jobs) ||
         !Array.isArray(result.applications)
       ) {
-        throw new Error(
-          "Invalid monthly analytics response.",
-        );
+        throw new Error("Invalid monthly analytics response.");
       }
 
       return result as MonthlyAnalytics;
     },
-
     retry: false,
   });
 
- // compnay performance query
+  // COMPANY PERFORMANCE QUERY
 
   const {
     data: companyPerformance,
@@ -687,7 +621,7 @@ export default function ReportsPage() {
     retry: false,
   });
 
-  // ==================== DATE-FILTERED REPORTS QUERY ====================
+  // DATE-FILTERED REPORTS QUERY
 
   const customDateRangeReady =
     reportPeriod !== "custom" ||
@@ -720,6 +654,7 @@ export default function ReportsPage() {
       const response = await apiRequest(
         `/admin/filtered-reports?${params.toString()}`,
       );
+
       const result = await response.json();
 
       if (!response.ok) {
@@ -743,29 +678,7 @@ export default function ReportsPage() {
     retry: false,
   });
 
- // logout
-
-  const logout = async () => {
-    const token = sessionStorage.getItem("access_token");
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Clear the local session even if logout fails.
-    } finally {
-      clearSession();
-      router.push("/login");
-    }
-  };
-
-// report calculation
+  // REPORT CALCULATIONS
 
   const totalRecords =
     stats.users.total +
@@ -810,47 +723,19 @@ export default function ReportsPage() {
   );
 
   const jobRows = [
-    {
-      label: "Published",
-      value: stats.jobs.published,
-      color: "#16a34a",
-    },
-    {
-      label: "Draft",
-      value: stats.jobs.draft,
-      color: "#f59e0b",
-    },
-    {
-      label: "Closed",
-      value: stats.jobs.closed,
-      color: "#ef4444",
-    },
+    { label: "Published", value: stats.jobs.published, color: "#16a34a" },
+    { label: "Draft", value: stats.jobs.draft, color: "#f59e0b" },
+    { label: "Closed", value: stats.jobs.closed, color: "#ef4444" },
   ];
 
   const companyRows = [
-    {
-      label: "Approved",
-      value: stats.companies.approved,
-      color: "#16a34a",
-    },
-    {
-      label: "Pending",
-      value: stats.companies.pending,
-      color: "#f59e0b",
-    },
-    {
-      label: "Rejected",
-      value: stats.companies.rejected,
-      color: "#ef4444",
-    },
+    { label: "Approved", value: stats.companies.approved, color: "#16a34a" },
+    { label: "Pending", value: stats.companies.pending, color: "#f59e0b" },
+    { label: "Rejected", value: stats.companies.rejected, color: "#ef4444" },
   ];
 
   const userRows = [
-    {
-      label: "Candidates",
-      value: stats.users.candidates,
-      color: "#0ea5e9",
-    },
+    { label: "Candidates", value: stats.users.candidates, color: "#0ea5e9" },
     {
       label: "Company Admins",
       value: stats.users.companyAdmins,
@@ -863,78 +748,63 @@ export default function ReportsPage() {
     },
   ];
 
-// brackdown component
+  // BREAKDOWN COMPONENT
 
   const renderBreakdown = (
-    rows: {
-      label: string;
-      value: number;
-      color: string;
-    }[],
+    rows: { label: string; value: number; color: string }[],
     total: number,
-  ) => {
-    return (
-      <div style={{ display: "grid", gap: 18 }}>
-        {rows.map((item) => {
-          const percentage =
-            total > 0
-              ? (item.value / total) * 100
-              : 0;
+  ) => (
+    <div style={{ display: "grid", gap: 18 }}>
+      {rows.map((item) => {
+        const percentage = total > 0 ? (item.value / total) * 100 : 0;
 
-          return (
-            <div key={item.label}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  marginBottom: 8,
-                  fontSize: 14,
-                }}
-              >
-                <span
-                  style={{
-                    color: "#64748b",
-                    fontWeight: 600,
-                  }}
-                >
-                  {item.label}
-                </span>
+        return (
+          <div key={item.label}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 8,
+                fontSize: 14,
+              }}
+            >
+              <span style={{ color: "#64748b", fontWeight: 600 }}>
+                {item.label}
+              </span>
 
-                <strong>
-                  {item.value.toLocaleString()} (
-                  {percentage.toFixed(1)}%)
-                </strong>
-              </div>
-
-              <div
-                style={{
-                  height: 10,
-                  width: "100%",
-                  background: "#edf0f5",
-                  borderRadius: 20,
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${percentage}%`,
-                    maxWidth: "100%",
-                    background: item.color,
-                    borderRadius: 20,
-                    transition: "width 0.4s ease",
-                  }}
-                />
-              </div>
+              <strong>
+                {item.value.toLocaleString()} ({percentage.toFixed(1)}%)
+              </strong>
             </div>
-          );
-        })}
-      </div>
-    );
-  };
 
-// error handling
+            <div
+              style={{
+                height: 10,
+                width: "100%",
+                background: "#edf0f5",
+                borderRadius: 20,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${percentage}%`,
+                  maxWidth: "100%",
+                  background: item.color,
+                  borderRadius: 20,
+                  transition: "width 0.4s ease",
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  // ERROR HANDLING
 
   const displayError =
     error ||
@@ -944,7 +814,7 @@ export default function ReportsPage() {
         : "Unable to load reports."
       : "");
 
-  // card style
+  // CARD STYLES
 
   const cardStyle = {
     background: "#ffffff",
@@ -961,7 +831,7 @@ export default function ReportsPage() {
     gap: 22,
   } as const;
 
-  // stat card
+  // STAT CARDS
 
   const statCards = [
     {
@@ -997,190 +867,83 @@ export default function ReportsPage() {
       background: "#ecfdf5",
     },
   ];
-  
-  // Export date-filtered reports as CSV
-const exportFilteredReports = () => {
-  if (!filteredReports || filteredReportsLoading || !customDateRangeReady) {
-    setError("There are no filtered report results to export.");
-    return;
-  }
 
-  setError("");
-  setSuccess("");
+  // EXPORT FILTERED REPORTS AS CSV
 
-  const rows = [
-    ["Report", "Value"],
-    ["Period", filteredReports.period],
-    ["Start Date", filteredReports.dateRange?.startDate ?? ""],
-    ["End Date", filteredReports.dateRange?.endDate ?? ""],
-    ["New Users", String(filteredReports.users)],
-    ["New Jobs", String(filteredReports.jobs)],
-    ["Applications", String(filteredReports.applications)],
-  ];
+  const exportFilteredReports = () => {
+    if (
+      !filteredReports ||
+      filteredReportsLoading ||
+      !customDateRangeReady
+    ) {
+      setError("There are no filtered report results to export.");
+      return;
+    }
 
-  const csvContent = rows
-    .map((row) =>
-      row
-        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-        .join(","),
-    )
-    .join("\r\n");
+    setError("");
+    setSuccess("");
 
-  const blob = new Blob(["\uFEFF", csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+    const rows = [
+      ["Report", "Value"],
+      ["Period", filteredReports.period],
+      ["Start Date", filteredReports.dateRange?.startDate ?? ""],
+      ["End Date", filteredReports.dateRange?.endDate ?? ""],
+      ["New Users", String(filteredReports.users)],
+      ["New Jobs", String(filteredReports.jobs)],
+      ["Applications", String(filteredReports.applications)],
+    ];
 
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const dateLabel = new Date().toISOString().slice(0, 10);
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+          .join(","),
+      )
+      .join("\r\n");
 
-  link.href = downloadUrl;
-  link.download = `careerhub-report-${reportPeriod}-${dateLabel}.csv`;
+    const blob = new Blob(["\uFEFF", csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
 
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dateLabel = new Date().toISOString().slice(0, 10);
 
-  URL.revokeObjectURL(downloadUrl);
+    link.href = downloadUrl;
+    link.download = `careerhub-report-${reportPeriod}-${dateLabel}.csv`;
 
-  setSuccess("Filtered report exported successfully.");
-};
-  // refresh all report
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(downloadUrl);
+
+    setSuccess("Filtered report exported successfully.");
+  };
+
+  // REFRESH ALL REPORTS
 
   const refreshAllReports = async () => {
+    setError("");
+
     await Promise.all([
       refetch(),
       refetchMonthly(),
       refetchCompanyPerformance(),
-      refetchFilteredReports(),
+      ...(customDateRangeReady ? [refetchFilteredReports()] : []),
     ]);
   };
 
-  // page ui
+  // PAGE UI
 
   return (
     <div className="admin-layout">
-      {/* SIDEBAR */}
+      {/* SHARED ADMIN SIDEBAR */}
 
-      <aside
-        className={`admin-sidebar ${menuOpen ? "open" : ""}`}
-      >
-        <div className="admin-brand">
-          <div className="admin-brand-icon">C</div>
-
-          <div>
-            <h2>CareerHub</h2>
-            <span>Admin Portal</span>
-          </div>
-
-          <button
-            className="admin-close-menu"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="admin-nav-label">MENU</div>
-
-        <nav className="admin-navigation">
-          <Link
-            href="/admin"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <LayoutDashboard size={19} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link
-            href="/admin/companies"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Building2 size={19} />
-            <span>Companies</span>
-          </Link>
-
-          <Link
-            href="/admin/users"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Users size={19} />
-            <span>Users</span>
-          </Link>
-
-          <Link
-            href="/admin/jobs"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BriefcaseBusiness size={19} />
-            <span>Jobs</span>
-          </Link>
-
-          <Link
-            href="/admin/applications"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <FileText size={19} />
-            <span>Applications</span>
-          </Link>
-
-          <Link
-            href="/admin/reports"
-            className="admin-nav-item active"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BarChart3 size={19} />
-            <span>Reports</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Settings size={19} />
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        {/* SIDEBAR BOTTOM */}
-
-        <div className="admin-sidebar-bottom">
-          <div className="admin-profile">
-            <div className="admin-avatar">SA</div>
-
-            <div className="admin-profile-info">
-              <strong>Super Admin</strong>
-              <span>Administrator</span>
-            </div>
-          </div>
-
-          <button
-            className="admin-logout"
-            onClick={logout}
-          >
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-
-      {menuOpen && (
-        <button
-          className="admin-overlay"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
-      )}
-
-      
+      <AdminSidebar
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
 
       <main className="admin-main">
         {/* TOPBAR */}
@@ -1200,27 +963,6 @@ const exportFilteredReports = () => {
               Monitor platform statistics and recruitment activity.
             </p>
           </div>
-
-          <button
-            className="admin-refresh"
-            onClick={refreshAllReports}
-            disabled={isFetching || monthlyLoading || companyPerformanceLoading}
-          >
-            <RefreshCw
-              size={16}
-              className={
-                isFetching || monthlyLoading || companyPerformanceLoading
-                  ? "animate-spin"
-                  : ""
-              }
-            />
-
-            <span>
-              {isFetching || monthlyLoading || companyPerformanceLoading
-                ? "Refreshing..."
-                : "Refresh"}
-            </span>
-          </button>
         </header>
 
         {/* PAGE CONTENT */}
@@ -1231,7 +973,6 @@ const exportFilteredReports = () => {
           {displayError && (
             <div className="company-alert error">
               <span>{displayError}</span>
-
               <button onClick={() => setError("")}>
                 <X size={16} />
               </button>
@@ -1241,7 +982,6 @@ const exportFilteredReports = () => {
           {success && (
             <div className="company-alert success">
               <span>{success}</span>
-
               <button onClick={() => setSuccess("")}>
                 <X size={16} />
               </button>
@@ -1253,9 +993,7 @@ const exportFilteredReports = () => {
           <div className="company-welcome">
             <div>
               <span>SUPER ADMIN / REPORTS</span>
-
               <h2>Platform overview</h2>
-
               <p>
                 Get an overview of users, companies, job postings,
                 and candidate applications across CareerHub.
@@ -1268,6 +1006,7 @@ const exportFilteredReports = () => {
           </div>
 
           {/* DATE-FILTERED REPORTS */}
+
           <section
             style={{
               ...cardStyle,
@@ -1277,62 +1016,75 @@ const exportFilteredReports = () => {
             }}
           >
             <div
-  style={{
-    display: "flex",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 12,
-  }}
->
-  <div>
-    <h2 style={{ margin: 0, fontSize: 20, color: "#172033" }}>
-      Date-Filtered Reports
-    </h2>
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+              }}
+            >
+              <div>
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: 20,
+                    color: "#172033",
+                  }}
+                >
+                  Date-Filtered Reports
+                </h2>
 
-    <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 13 }}>
-      View new users, jobs, and applications within a selected period.
-      The platform overview below remains the all-time summary.
-    </p>
-  </div>
+                <p
+                  style={{
+                    margin: "6px 0 0",
+                    color: "#64748b",
+                    fontSize: 13,
+                  }}
+                >
+                  View new users, jobs, and applications within a selected
+                  period. The platform overview below remains the all-time
+                  summary.
+                </p>
+              </div>
 
-  <button
-    type="button"
-    onClick={exportFilteredReports}
-    disabled={
-      !filteredReports ||
-      filteredReportsLoading ||
-      !customDateRangeReady
-    }
-    style={{
-      minHeight: 42,
-      padding: "10px 16px",
-      border: "none",
-      borderRadius: 9,
-      background:
-        !filteredReports ||
-        filteredReportsLoading ||
-        !customDateRangeReady
-          ? "#cbd5e1"
-          : "#2563eb",
-      color: "#ffffff",
-      fontSize: 13,
-      fontWeight: 700,
-      cursor:
-        !filteredReports ||
-        filteredReportsLoading ||
-        !customDateRangeReady
-          ? "not-allowed"
-          : "pointer",
-      display: "flex",
-      alignItems: "center",
-      gap: 8,
-    }}
-  >
-    <FileText size={17} />
-    Export CSV
-  </button>
-</div>
+              <button
+                type="button"
+                onClick={exportFilteredReports}
+                disabled={
+                  !filteredReports ||
+                  filteredReportsLoading ||
+                  !customDateRangeReady
+                }
+                style={{
+                  minHeight: 42,
+                  padding: "10px 16px",
+                  border: "none",
+                  borderRadius: 9,
+                  background:
+                    !filteredReports ||
+                    filteredReportsLoading ||
+                    !customDateRangeReady
+                      ? "#cbd5e1"
+                      : "#2563eb",
+                  color: "#ffffff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor:
+                    !filteredReports ||
+                    filteredReportsLoading ||
+                    !customDateRangeReady
+                      ? "not-allowed"
+                      : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <FileText size={17} />
+                Export CSV
+              </button>
+            </div>
 
             <div
               style={{
@@ -1342,13 +1094,28 @@ const exportFilteredReports = () => {
                 gap: 14,
               }}
             >
-              <label style={{ display: "grid", gap: 7, minWidth: 190 }}>
-                <span style={{ color: "#475569", fontSize: 13, fontWeight: 600 }}>
+              <label
+                style={{
+                  display: "grid",
+                  gap: 7,
+                  minWidth: 190,
+                }}
+              >
+                <span
+                  style={{
+                    color: "#475569",
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                >
                   Report period
                 </span>
+
                 <select
                   value={reportPeriod}
-                  onChange={(event) => setReportPeriod(event.target.value)}
+                  onChange={(event) =>
+                    setReportPeriod(event.target.value)
+                  }
                   style={{
                     minHeight: 42,
                     padding: "9px 12px",
@@ -1370,14 +1137,23 @@ const exportFilteredReports = () => {
               {reportPeriod === "custom" && (
                 <>
                   <label style={{ display: "grid", gap: 7 }}>
-                    <span style={{ color: "#475569", fontSize: 13, fontWeight: 600 }}>
+                    <span
+                      style={{
+                        color: "#475569",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
                       Start date
                     </span>
+
                     <input
                       type="date"
                       value={customStartDate}
                       max={customEndDate || undefined}
-                      onChange={(event) => setCustomStartDate(event.target.value)}
+                      onChange={(event) =>
+                        setCustomStartDate(event.target.value)
+                      }
                       style={{
                         minHeight: 42,
                         padding: "9px 12px",
@@ -1386,15 +1162,25 @@ const exportFilteredReports = () => {
                       }}
                     />
                   </label>
+
                   <label style={{ display: "grid", gap: 7 }}>
-                    <span style={{ color: "#475569", fontSize: 13, fontWeight: 600 }}>
+                    <span
+                      style={{
+                        color: "#475569",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
                       End date
                     </span>
+
                     <input
                       type="date"
                       value={customEndDate}
                       min={customStartDate || undefined}
-                      onChange={(event) => setCustomEndDate(event.target.value)}
+                      onChange={(event) =>
+                        setCustomEndDate(event.target.value)
+                      }
                       style={{
                         minHeight: 42,
                         padding: "9px 12px",
@@ -1408,8 +1194,15 @@ const exportFilteredReports = () => {
             </div>
 
             {reportPeriod === "custom" && !customDateRangeReady && (
-              <p style={{ margin: 0, color: "#b45309", fontSize: 13 }}>
-                Choose both dates. The start date must not be after the end date.
+              <p
+                style={{
+                  margin: 0,
+                  color: "#b45309",
+                  fontSize: 13,
+                }}
+              >
+                Choose both dates. The start date must not be after the end
+                date.
               </p>
             )}
 
@@ -1425,23 +1218,43 @@ const exportFilteredReports = () => {
               </div>
             ) : filteredReports ? (
               <>
-                <p style={{ margin: 0, color: "#64748b", fontSize: 13 }}>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#64748b",
+                    fontSize: 13,
+                  }}
+                >
                   Period: <strong>{filteredReports.period}</strong>
                   {filteredReports.dateRange?.startDate &&
                     filteredReports.dateRange?.endDate &&
                     ` • ${filteredReports.dateRange.startDate} to ${filteredReports.dateRange.endDate}`}
                 </p>
+
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(180px, 1fr))",
                     gap: 14,
                   }}
                 >
                   {[
-                    { label: "New Users", value: filteredReports.users, color: "#2563eb" },
-                    { label: "New Jobs", value: filteredReports.jobs, color: "#0891b2" },
-                    { label: "Applications", value: filteredReports.applications, color: "#059669" },
+                    {
+                      label: "New Users",
+                      value: filteredReports.users,
+                      color: "#2563eb",
+                    },
+                    {
+                      label: "New Jobs",
+                      value: filteredReports.jobs,
+                      color: "#0891b2",
+                    },
+                    {
+                      label: "Applications",
+                      value: filteredReports.applications,
+                      color: "#059669",
+                    },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -1452,9 +1265,16 @@ const exportFilteredReports = () => {
                         background: "#f8fafc",
                       }}
                     >
-                      <span style={{ color: "#64748b", fontSize: 13, fontWeight: 600 }}>
+                      <span
+                        style={{
+                          color: "#64748b",
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }}
+                      >
                         {item.label}
                       </span>
+
                       <strong
                         style={{
                           display: "block",
@@ -1490,10 +1310,7 @@ const exportFilteredReports = () => {
                 }}
               >
                 {statCards.map((card) => (
-                  <div
-                    key={card.title}
-                    style={cardStyle}
-                  >
+                  <div key={card.title} style={cardStyle}>
                     <div
                       style={{
                         display: "flex",
@@ -1607,7 +1424,7 @@ const exportFilteredReports = () => {
                 </div>
               </div>
 
-              {/* ==================== MONTHLY ANALYTICS ==================== */}
+              {/* MONTHLY ANALYTICS */}
 
               <div style={{ marginBottom: 28 }}>
                 <div
@@ -1656,8 +1473,6 @@ const exportFilteredReports = () => {
                   </span>
                 </div>
 
-                {/* MONTHLY LOADING */}
-
                 {monthlyLoading ? (
                   <div style={cardStyle}>
                     Loading monthly analytics...
@@ -1671,14 +1486,7 @@ const exportFilteredReports = () => {
                     </span>
                   </div>
                 ) : monthlyAnalytics ? (
-                  <div
-                    style={{
-                      display: "grid",
-                      gap: 20,
-                    }}
-                  >
-                    {/* USER REGISTRATIONS */}
-
+                  <div style={{ display: "grid", gap: 20 }}>
                     <MonthlyChart
                       title="User Registrations"
                       description="New user accounts registered each month."
@@ -1687,8 +1495,6 @@ const exportFilteredReports = () => {
                       color="#2563eb"
                     />
 
-                    {/* JOB POSTINGS */}
-
                     <MonthlyChart
                       title="Monthly Job Postings"
                       description="New jobs created by companies each month."
@@ -1696,8 +1502,6 @@ const exportFilteredReports = () => {
                       type="bar"
                       color="#0891b2"
                     />
-
-                    {/* APPLICATIONS */}
 
                     <MonthlyChart
                       title="Monthly Applications"
@@ -1710,20 +1514,36 @@ const exportFilteredReports = () => {
                 ) : null}
               </div>
 
-              {/* ==================== COMPANY PERFORMANCE ==================== */}
+              {/* COMPANY PERFORMANCE */}
 
               <div style={{ marginBottom: 28 }}>
                 <div style={{ marginBottom: 18 }}>
-                  <h2 style={{ fontSize: 21, margin: 0, color: "#172033" }}>
+                  <h2
+                    style={{
+                      fontSize: 21,
+                      margin: 0,
+                      color: "#172033",
+                    }}
+                  >
                     Company Performance
                   </h2>
-                  <p style={{ color: "#64748b", fontSize: 13, marginBottom: 0 }}>
-                    Compare job postings and candidate application outcomes across registered companies.
+
+                  <p
+                    style={{
+                      color: "#64748b",
+                      fontSize: 13,
+                      marginBottom: 0,
+                    }}
+                  >
+                    Compare job postings and candidate application outcomes
+                    across registered companies.
                   </p>
                 </div>
 
                 {companyPerformanceLoading ? (
-                  <div style={cardStyle}>Loading company performance...</div>
+                  <div style={cardStyle}>
+                    Loading company performance...
+                  </div>
                 ) : companyPerformanceIsError ? (
                   <div className="company-alert error">
                     <span>
@@ -1737,97 +1557,252 @@ const exportFilteredReports = () => {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(190px, 1fr))",
                         gap: 16,
                         marginBottom: 18,
                       }}
                     >
                       <div style={cardStyle}>
-                        <span style={{ color: "#64748b", fontSize: 13 }}>Companies tracked</span>
+                        <span style={{ color: "#64748b", fontSize: 13 }}>
+                          Companies tracked
+                        </span>
                         <h3 style={{ margin: "8px 0 0", fontSize: 28 }}>
                           {companyPerformance.totalCompanies.toLocaleString()}
                         </h3>
                       </div>
+
                       <div style={cardStyle}>
-                        <span style={{ color: "#64748b", fontSize: 13 }}>Jobs posted by companies</span>
+                        <span style={{ color: "#64748b", fontSize: 13 }}>
+                          Jobs posted by companies
+                        </span>
                         <h3 style={{ margin: "8px 0 0", fontSize: 28 }}>
-                          {companyPerformance.companies.reduce((sum, company) => sum + company.jobs.total, 0).toLocaleString()}
+                          {companyPerformance.companies
+                            .reduce(
+                              (sum, company) => sum + company.jobs.total,
+                              0,
+                            )
+                            .toLocaleString()}
                         </h3>
                       </div>
+
                       <div style={cardStyle}>
-                        <span style={{ color: "#64748b", fontSize: 13 }}>Applications received</span>
+                        <span style={{ color: "#64748b", fontSize: 13 }}>
+                          Applications received
+                        </span>
                         <h3 style={{ margin: "8px 0 0", fontSize: 28 }}>
-                          {companyPerformance.companies.reduce((sum, company) => sum + company.applications.total, 0).toLocaleString()}
+                          {companyPerformance.companies
+                            .reduce(
+                              (sum, company) =>
+                                sum + company.applications.total,
+                              0,
+                            )
+                            .toLocaleString()}
                         </h3>
                       </div>
+
                       <div style={cardStyle}>
-                        <span style={{ color: "#64748b", fontSize: 13 }}>Candidates selected</span>
-                        <h3 style={{ margin: "8px 0 0", fontSize: 28, color: "#16a34a" }}>
-                          {companyPerformance.companies.reduce((sum, company) => sum + company.applications.selected, 0).toLocaleString()}
+                        <span style={{ color: "#64748b", fontSize: 13 }}>
+                          Candidates selected
+                        </span>
+                        <h3
+                          style={{
+                            margin: "8px 0 0",
+                            fontSize: 28,
+                            color: "#16a34a",
+                          }}
+                        >
+                          {companyPerformance.companies
+                            .reduce(
+                              (sum, company) =>
+                                sum + company.applications.selected,
+                              0,
+                            )
+                            .toLocaleString()}
                         </h3>
                       </div>
                     </div>
 
-                    <div style={{ ...cardStyle, padding: 0, overflow: "hidden" }}>
-                      <div style={{ padding: "20px 22px", borderBottom: "1px solid #edf0f5" }}>
-                        <h3 style={{ margin: 0, fontSize: 17 }}>Company Performance Details</h3>
-                        <p style={{ color: "#64748b", fontSize: 13, margin: "5px 0 0" }}>
-                          Job activity and application status for each company.
+                    <div
+                      style={{
+                        ...cardStyle,
+                        padding: 0,
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: "20px 22px",
+                          borderBottom: "1px solid #edf0f5",
+                        }}
+                      >
+                        <h3 style={{ margin: 0, fontSize: 17 }}>
+                          Company Performance Details
+                        </h3>
+
+                        <p
+                          style={{
+                            color: "#64748b",
+                            fontSize: 13,
+                            margin: "5px 0 0",
+                          }}
+                        >
+                          Job activity and application status for each
+                          company.
                         </p>
                       </div>
 
                       {companyPerformance.companies.length === 0 ? (
-                        <div style={{ padding: 28, textAlign: "center", color: "#64748b" }}>
+                        <div
+                          style={{
+                            padding: 28,
+                            textAlign: "center",
+                            color: "#64748b",
+                          }}
+                        >
                           No companies are available yet.
                         </div>
                       ) : (
                         <div style={{ overflowX: "auto" }}>
-                          <table style={{ width: "100%", minWidth: 920, borderCollapse: "collapse", textAlign: "left" }}>
+                          <table
+                            style={{
+                              width: "100%",
+                              minWidth: 920,
+                              borderCollapse: "collapse",
+                              textAlign: "left",
+                            }}
+                          >
                             <thead>
                               <tr style={{ background: "#f8fafc" }}>
-                                {["Company", "Status", "Total Jobs", "Published", "Applications", "Pending", "Interview", "Selected", "Rejected"].map((heading) => (
-                                  <th key={heading} style={{ padding: "14px 16px", color: "#64748b", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>
+                                {[
+                                  "Company",
+                                  "Status",
+                                  "Total Jobs",
+                                  "Published",
+                                  "Applications",
+                                  "Pending",
+                                  "Interview",
+                                  "Selected",
+                                  "Rejected",
+                                ].map((heading) => (
+                                  <th
+                                    key={heading}
+                                    style={{
+                                      padding: "14px 16px",
+                                      color: "#64748b",
+                                      fontSize: 12,
+                                      fontWeight: 700,
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
                                     {heading}
                                   </th>
                                 ))}
                               </tr>
                             </thead>
+
                             <tbody>
-                              {companyPerformance.companies.map((company) => (
-                                <tr key={company.id} style={{ borderTop: "1px solid #edf0f5" }}>
-                                  <td style={{ padding: 16 }}>
-                                    <strong style={{ display: "block", color: "#172033" }}>{company.name}</strong>
-                                    <span style={{ color: "#64748b", fontSize: 12 }}>{company.email}</span>
-                                  </td>
-                                  <td style={{ padding: 16 }}>
-                                    <span
+                              {companyPerformance.companies.map(
+                                (company) => (
+                                  <tr
+                                    key={company.id}
+                                    style={{
+                                      borderTop: "1px solid #edf0f5",
+                                    }}
+                                  >
+                                    <td style={{ padding: 16 }}>
+                                      <strong
+                                        style={{
+                                          display: "block",
+                                          color: "#172033",
+                                        }}
+                                      >
+                                        {company.name}
+                                      </strong>
+                                      <span
+                                        style={{
+                                          color: "#64748b",
+                                          fontSize: 12,
+                                        }}
+                                      >
+                                        {company.email}
+                                      </span>
+                                    </td>
+
+                                    <td style={{ padding: 16 }}>
+                                      <span
+                                        style={{
+                                          display: "inline-block",
+                                          padding: "5px 9px",
+                                          borderRadius: 20,
+                                          fontSize: 11,
+                                          fontWeight: 700,
+                                          color:
+                                            company.status === "APPROVED"
+                                              ? "#15803d"
+                                              : company.status === "REJECTED"
+                                                ? "#b91c1c"
+                                                : "#b45309",
+                                          background:
+                                            company.status === "APPROVED"
+                                              ? "#dcfce7"
+                                              : company.status === "REJECTED"
+                                                ? "#fee2e2"
+                                                : "#fef3c7",
+                                        }}
+                                      >
+                                        {company.status}
+                                      </span>
+
+                                      {!company.isActive && (
+                                        <span
+                                          style={{
+                                            display: "block",
+                                            marginTop: 5,
+                                            color: "#b91c1c",
+                                            fontSize: 11,
+                                          }}
+                                        >
+                                          Inactive
+                                        </span>
+                                      )}
+                                    </td>
+
+                                    <td style={{ padding: 16, fontWeight: 700 }}>
+                                      {company.jobs.total}
+                                    </td>
+                                    <td style={{ padding: 16 }}>
+                                      {company.jobs.published}
+                                    </td>
+                                    <td style={{ padding: 16, fontWeight: 700 }}>
+                                      {company.applications.total}
+                                    </td>
+                                    <td style={{ padding: 16 }}>
+                                      {company.applications.pending}
+                                    </td>
+                                    <td style={{ padding: 16 }}>
+                                      {company.applications.interview}
+                                    </td>
+                                    <td
                                       style={{
-                                        display: "inline-block",
-                                        padding: "5px 9px",
-                                        borderRadius: 20,
-                                        fontSize: 11,
+                                        padding: 16,
+                                        color: "#15803d",
                                         fontWeight: 700,
-                                        color: company.status === "APPROVED" ? "#15803d" : company.status === "REJECTED" ? "#b91c1c" : "#b45309",
-                                        background: company.status === "APPROVED" ? "#dcfce7" : company.status === "REJECTED" ? "#fee2e2" : "#fef3c7",
                                       }}
                                     >
-                                      {company.status}
-                                    </span>
-                                    {!company.isActive && (
-                                      <span style={{ display: "block", marginTop: 5, color: "#b91c1c", fontSize: 11 }}>
-                                        Inactive
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: 16, fontWeight: 700 }}>{company.jobs.total}</td>
-                                  <td style={{ padding: 16 }}>{company.jobs.published}</td>
-                                  <td style={{ padding: 16, fontWeight: 700 }}>{company.applications.total}</td>
-                                  <td style={{ padding: 16 }}>{company.applications.pending}</td>
-                                  <td style={{ padding: 16 }}>{company.applications.interview}</td>
-                                  <td style={{ padding: 16, color: "#15803d", fontWeight: 700 }}>{company.applications.selected}</td>
-                                  <td style={{ padding: 16, color: "#b91c1c" }}>{company.applications.rejected}</td>
-                                </tr>
-                              ))}
+                                      {company.applications.selected}
+                                    </td>
+                                    <td
+                                      style={{
+                                        padding: 16,
+                                        color: "#b91c1c",
+                                      }}
+                                    >
+                                      {company.applications.rejected}
+                                    </td>
+                                  </tr>
+                                ),
+                              )}
                             </tbody>
                           </table>
                         </div>
@@ -1837,7 +1812,7 @@ const exportFilteredReports = () => {
                 ) : null}
               </div>
 
-              {/* ==================== BREAKDOWN CARDS ==================== */}
+              {/* BREAKDOWN CARDS */}
 
               <div
                 style={{
@@ -1852,12 +1827,7 @@ const exportFilteredReports = () => {
 
                 <div style={reportCardStyle}>
                   <div>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: 18,
-                      }}
-                    >
+                    <h2 style={{ margin: 0, fontSize: 18 }}>
                       User Breakdown
                     </h2>
 
@@ -1872,10 +1842,7 @@ const exportFilteredReports = () => {
                     </p>
                   </div>
 
-                  {renderBreakdown(
-                    userRows,
-                    stats.users.total,
-                  )}
+                  {renderBreakdown(userRows, stats.users.total)}
 
                   <div
                     style={{
@@ -1899,12 +1866,7 @@ const exportFilteredReports = () => {
 
                 <div style={reportCardStyle}>
                   <div>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: 18,
-                      }}
-                    >
+                    <h2 style={{ margin: 0, fontSize: 18 }}>
                       Company Breakdown
                     </h2>
 
@@ -1919,10 +1881,7 @@ const exportFilteredReports = () => {
                     </p>
                   </div>
 
-                  {renderBreakdown(
-                    companyRows,
-                    stats.companies.total,
-                  )}
+                  {renderBreakdown(companyRows, stats.companies.total)}
 
                   <div
                     style={{
@@ -1946,12 +1905,7 @@ const exportFilteredReports = () => {
 
                 <div style={reportCardStyle}>
                   <div>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: 18,
-                      }}
-                    >
+                    <h2 style={{ margin: 0, fontSize: 18 }}>
                       Job Breakdown
                     </h2>
 
@@ -1966,10 +1920,7 @@ const exportFilteredReports = () => {
                     </p>
                   </div>
 
-                  {renderBreakdown(
-                    jobRows,
-                    stats.jobs.total,
-                  )}
+                  {renderBreakdown(jobRows, stats.jobs.total)}
 
                   <div
                     style={{
@@ -1994,12 +1945,7 @@ const exportFilteredReports = () => {
 
               <div style={reportCardStyle}>
                 <div>
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: 18,
-                    }}
-                  >
+                  <h2 style={{ margin: 0, fontSize: 18 }}>
                     Application Status Breakdown
                   </h2>
 

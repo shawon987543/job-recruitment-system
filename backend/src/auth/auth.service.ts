@@ -400,6 +400,7 @@ export class AuthService {
 
     await this.ensureCompanyIsActive(user);
 
+  // make JWT token 
     const payload = {
       sub: user.id,
       email: user.email,

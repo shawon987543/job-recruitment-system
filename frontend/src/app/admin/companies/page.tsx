@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
   useMutation,
@@ -7,18 +7,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import AdminSidebar from "../../../components/admin/AdminSidebar";
+import Skeleton from "@/components/ui/skeleton";
 import {
-  LayoutDashboard,
   Building2,
-  Users,
-  BriefcaseBusiness,
-  FileText,
-  BarChart3,
-  Settings,
-  LogOut,
   Search,
-  RefreshCw,
   Plus,
   Eye,
   Pencil,
@@ -103,6 +96,69 @@ const emptyForm: CompanyForm = {
   description: "",
 };
 
+/** Skeleton component for the companies page */
+function CompaniesPageSkeleton() {
+  return (
+    <div className="company-table-scroll">
+      <table className="company-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Contact Person</th>
+            <th>Status</th>
+            <th>Account</th>
+            <th>Admins</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {[1, 2, 3, 4, 5].map((item) => (
+            <tr key={item}>
+              <td>
+                <div className="company-name-cell">
+                  <Skeleton variant="circle" width={38} height={38} />
+                  <div style={{ flex: 1 }}>
+                    <Skeleton variant="text" width="70%" />
+                    <Skeleton variant="text" width="85%" />
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                <div className="company-contact-cell">
+                  <Skeleton variant="text" width="75%" />
+                  <Skeleton variant="text" width="60%" />
+                </div>
+              </td>
+
+              <td>
+                <Skeleton variant="rectangle" width={85} height={25} />
+              </td>
+
+              <td>
+                <Skeleton variant="rectangle" width={70} height={25} />
+              </td>
+
+              <td>
+                <Skeleton variant="text" width="65%" />
+              </td>
+
+              <td>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <Skeleton variant="rectangle" width={28} height={28} />
+                  <Skeleton variant="rectangle" width={28} height={28} />
+                  <Skeleton variant="rectangle" width={28} height={28} />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function CompaniesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -114,11 +170,22 @@ export default function CompaniesPage() {
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Debounced search state
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   // Modal state
   const [selectedCompany, setSelectedCompany] =
     useState<Company | null>(null);
-  const [modal, setModal] = useState<ModalType>(null);
 
+  const [modal, setModal] = useState<ModalType>(null);
   const [form, setForm] = useState<CompanyForm>(emptyForm);
   const [rejectReason, setRejectReason] = useState("");
   const [adminName, setAdminName] = useState("");
@@ -139,8 +206,9 @@ export default function CompaniesPage() {
       if (!token) {
         clearSession();
         router.replace("/login");
+
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
@@ -167,14 +235,15 @@ export default function CompaniesPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ refreshToken }),
-          },
+          }
         );
 
         if (!refreshResponse.ok) {
           clearSession();
           router.replace("/login");
+
           throw new Error(
-            "Your session has expired. Please log in again.",
+            "Your session has expired. Please log in again."
           );
         }
 
@@ -187,12 +256,12 @@ export default function CompaniesPage() {
 
         sessionStorage.setItem(
           "access_token",
-          refreshed.access_token,
+          refreshed.access_token
         );
 
         sessionStorage.setItem(
           "refresh_token",
-          refreshed.refresh_token,
+          refreshed.refresh_token
         );
 
         response = await sendRequest(token);
@@ -201,42 +270,35 @@ export default function CompaniesPage() {
       if (response.status === 401) {
         clearSession();
         router.replace("/login");
+
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
       if (response.status === 403) {
         throw new Error(
-          "You are not authorized to perform this action.",
+          "You are not authorized to perform this action."
         );
       }
 
       return response;
     },
-    [clearSession, router],
+    [clearSession, router]
   );
 
-  // Fetch companies and verify Super Admin.
-  const {
-    data: companies = [],
-    isLoading,
-    isFetching,
-    isError: isCompaniesError,
-    error: companiesError,
-    refetch: loadCompanies,
-  } = useQuery<Company[]>({
-    queryKey: ["companies"],
-
-    queryFn: async () => {
+  // Common company fetching function.
+  const fetchCompanies = useCallback(
+    async (path: string): Promise<Company[]> => {
       const userData = sessionStorage.getItem("user");
       const token = sessionStorage.getItem("access_token");
 
       if (!userData || !token) {
         clearSession();
         router.replace("/login");
+
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
@@ -247,29 +309,65 @@ export default function CompaniesPage() {
       } catch {
         clearSession();
         router.replace("/login");
+
         throw new Error("Invalid session. Please log in again.");
       }
 
       if (user.role !== "SUPER_ADMIN") {
         router.replace("/");
+
         throw new Error(
-          "You are not authorized to view companies.",
+          "You are not authorized to view companies."
         );
       }
 
-      const response = await apiRequest("/companies");
+      const response = await apiRequest(path);
 
       if (!response.ok) {
         const result = await response.json().catch(() => ({}));
+
         throw new Error(
-          result.message || "Unable to load companies.",
+          result.message || "Unable to load companies."
         );
       }
 
-      return (await response.json()) as Company[];
-    },
+      const data = await response.json();
 
+      // Support either a direct array or a wrapped response.
+      return Array.isArray(data)
+        ? (data as Company[])
+        : (data.data || []) as Company[];
+    },
+    [apiRequest, clearSession, router]
+  );
+
+  // Fetch all companies once for summary cards and local filtering.
+  const {
+    data: allCompanies = [],
+    isLoading,
+    isError: isCompaniesError,
+    error: companiesError,
+  } = useQuery<Company[]>({
+    queryKey: ["companies", "summary"],
+    queryFn: () => fetchCompanies("/companies"),
     retry: false,
+  });
+
+  // LOCAL SEARCH + STATUS FILTER
+  // Only matching companies are displayed in the table.
+  const filteredCompanies = allCompanies.filter((company) => {
+    const searchTerm = debouncedSearch.toLowerCase();
+
+    const matchesSearch =
+      !searchTerm ||
+      (company.name || "").toLowerCase().includes(searchTerm) ||
+      (company.email || "").toLowerCase().includes(searchTerm) ||
+      (company.contactName || "").toLowerCase().includes(searchTerm);
+
+    const matchesStatus =
+      filter === "ALL" || company.status === filter;
+
+    return matchesSearch && matchesStatus;
   });
 
   // Display messages.
@@ -299,7 +397,7 @@ export default function CompaniesPage() {
         action === "approve"
           ? await apiRequest(
               `/companies/${company.id}/approve`,
-              { method: "PATCH" },
+              { method: "PATCH" }
             )
           : await apiRequest(
               `/companies/${company.id}/active-status`,
@@ -308,14 +406,14 @@ export default function CompaniesPage() {
                 body: JSON.stringify({
                   isActive: action === "activate",
                 }),
-              },
+              }
             );
 
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Company action failed.",
+          result.message || "Company action failed."
         );
       }
 
@@ -324,8 +422,9 @@ export default function CompaniesPage() {
 
     onSuccess: async (result) => {
       showMessage(
-        result.message || "Company updated successfully.",
+        result.message || "Company updated successfully."
       );
+
       await refreshCompanies();
     },
 
@@ -333,7 +432,7 @@ export default function CompaniesPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Company action failed.",
+          : "Company action failed."
       );
     },
   });
@@ -356,6 +455,7 @@ export default function CompaniesPage() {
 
       if (modalType === "create") {
         path = "/companies";
+
         options = {
           method: "POST",
           body: JSON.stringify(companyForm),
@@ -367,18 +467,21 @@ export default function CompaniesPage() {
 
         if (modalType === "edit") {
           path = `/companies/${company.id}`;
+
           options = {
             method: "PUT",
             body: JSON.stringify(companyForm),
           };
         } else if (modalType === "reject") {
           path = `/companies/${company.id}/reject`;
+
           options = {
             method: "PATCH",
             body: JSON.stringify({ reason }),
           };
         } else if (modalType === "admin") {
           path = `/companies/${company.id}/admin`;
+
           options = {
             method: "POST",
             body: JSON.stringify({
@@ -396,7 +499,7 @@ export default function CompaniesPage() {
         throw new Error(
           Array.isArray(result.message)
             ? result.message.join(", ")
-            : result.message || "Request failed.",
+            : result.message || "Request failed."
         );
       }
 
@@ -409,7 +512,7 @@ export default function CompaniesPage() {
       setForm(emptyForm);
 
       showMessage(
-        result.message || "Operation completed successfully.",
+        result.message || "Operation completed successfully."
       );
 
       await refreshCompanies();
@@ -419,7 +522,7 @@ export default function CompaniesPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Request failed.",
+          : "Request failed."
       );
     },
   });
@@ -427,7 +530,7 @@ export default function CompaniesPage() {
   // Open an existing company modal.
   const openModal = (
     type: ModalType,
-    company: Company,
+    company: Company
   ) => {
     setSelectedCompany(company);
     setModal(type);
@@ -476,7 +579,7 @@ export default function CompaniesPage() {
   // Company actions.
   const runCompanyAction = (
     company: Company,
-    action: CompanyAction,
+    action: CompanyAction
   ) => {
     const messages: Record<CompanyAction, string> = {
       approve: "Are you sure you want to approve this company?",
@@ -517,54 +620,20 @@ export default function CompaniesPage() {
     });
   };
 
-  // Logout.
-  const logout = async () => {
-    const token = sessionStorage.getItem("access_token");
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Clear local session even if API request fails.
-    } finally {
-      clearSession();
-      queryClient.clear();
-      router.push("/login");
-    }
-  };
-
-  // Search and filter.
-  const filteredCompanies = companies.filter((company) => {
-    const searchTerm = search.toLowerCase();
-
-    const matchesSearch =
-      company.name.toLowerCase().includes(searchTerm) ||
-      company.email.toLowerCase().includes(searchTerm) ||
-      company.contactName.toLowerCase().includes(searchTerm);
-
-    const matchesFilter =
-      filter === "ALL" || company.status === filter;
-
-    return matchesSearch && matchesFilter;
-  });
-
-  // Summary counts.
+  // Summary counts always use all companies.
   const counts = {
-    total: companies.length,
-    pending: companies.filter(
-      (company) => company.status === "PENDING",
+    total: allCompanies.length,
+
+    pending: allCompanies.filter(
+      (company) => company.status === "PENDING"
     ).length,
-    approved: companies.filter(
-      (company) => company.status === "APPROVED",
+
+    approved: allCompanies.filter(
+      (company) => company.status === "APPROVED"
     ).length,
-    rejected: companies.filter(
-      (company) => company.status === "REJECTED",
+
+    rejected: allCompanies.filter(
+      (company) => company.status === "REJECTED"
     ).length,
   };
 
@@ -578,119 +647,11 @@ export default function CompaniesPage() {
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside
-        className={`admin-sidebar ${menuOpen ? "open" : ""}`}
-      >
-        <div className="admin-brand">
-          <div className="admin-brand-icon">C</div>
-
-          <div>
-            <h2>CareerHub</h2>
-            <span>Admin Portal</span>
-          </div>
-
-          <button
-            className="admin-close-menu"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="admin-nav-label">MENU</div>
-
-        <nav className="admin-navigation">
-          <Link
-            href="/admin"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <LayoutDashboard size={19} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link
-            href="/admin/companies"
-            className="admin-nav-item active"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Building2 size={19} />
-            <span>Companies</span>
-          </Link>
-
-          <Link
-            href="/admin/users"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Users size={19} />
-            <span>Users</span>
-          </Link>
-
-          <Link
-            href="/admin/jobs"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BriefcaseBusiness size={19} />
-            <span>Jobs</span>
-          </Link>
-
-          <Link
-            href="/admin/applications"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <FileText size={19} />
-            <span>Applications</span>
-          </Link>
-
-          <Link
-            href="/admin/reports"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BarChart3 size={19} />
-            <span>Reports</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Settings size={19} />
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="admin-sidebar-bottom">
-          <div className="admin-profile">
-            <div className="admin-avatar">SA</div>
-
-            <div className="admin-profile-info">
-              <strong>Super Admin</strong>
-              <span>Administrator</span>
-            </div>
-          </div>
-
-          <button className="admin-logout" onClick={logout}>
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile overlay */}
-      {menuOpen && (
-        <button
-          className="admin-overlay"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
-      )}
+      {/* Shared Super Admin Sidebar */}
+      <AdminSidebar
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
 
       {/* Main content */}
       <main className="admin-main">
@@ -709,18 +670,6 @@ export default function CompaniesPage() {
               Manage registrations, company accounts and approvals.
             </p>
           </div>
-
-          <button
-            className="admin-refresh"
-            onClick={() => loadCompanies()}
-            disabled={isFetching}
-          >
-            <RefreshCw
-              size={16}
-              className={isFetching ? "animate-spin" : ""}
-            />
-            <span>{isFetching ? "Refreshing..." : "Refresh"}</span>
-          </button>
         </header>
 
         <section className="admin-content">
@@ -773,9 +722,11 @@ export default function CompaniesPage() {
               <span className="company-summary-icon blue">
                 <Building2 size={21} />
               </span>
+
               <span className="company-summary-label">
                 Total Companies
               </span>
+
               <strong>{counts.total}</strong>
             </button>
 
@@ -785,10 +736,10 @@ export default function CompaniesPage() {
               }`}
               onClick={() => setFilter("PENDING")}
             >
-              <span className="company-summary-icon orange">
-                <RefreshCw size={21} />
-              </span>
+              <span className="company-summary-icon orange"></span>
+
               <span className="company-summary-label">Pending</span>
+
               <strong>{counts.pending}</strong>
             </button>
 
@@ -801,7 +752,9 @@ export default function CompaniesPage() {
               <span className="company-summary-icon green">
                 <CheckCircle size={21} />
               </span>
+
               <span className="company-summary-label">Approved</span>
+
               <strong>{counts.approved}</strong>
             </button>
 
@@ -814,7 +767,9 @@ export default function CompaniesPage() {
               <span className="company-summary-icon red">
                 <XCircle size={21} />
               </span>
+
               <span className="company-summary-label">Rejected</span>
+
               <strong>{counts.rejected}</strong>
             </button>
           </div>
@@ -839,7 +794,9 @@ export default function CompaniesPage() {
 
                 <input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) =>
+                    setSearch(event.target.value)
+                  }
                   placeholder="Search companies..."
                 />
               </div>
@@ -889,15 +846,21 @@ export default function CompaniesPage() {
           {/* Company table */}
           <div className="company-table-card">
             {isLoading ? (
-              <div className="admin-loading">
-                Loading companies...
-              </div>
+              <CompaniesPageSkeleton />
             ) : filteredCompanies.length === 0 ? (
               <div className="company-empty">
                 <Building2 size={35} />
-                <h3>No companies found</h3>
+
+                <h3>
+                  {debouncedSearch
+                    ? "No matching companies found"
+                    : "No companies found"}
+                </h3>
+
                 <p>
-                  Try changing your search or status filter.
+                  {debouncedSearch
+                    ? `No companies match "${debouncedSearch}". Try another search term.`
+                    : "Try changing your status filter."}
                 </p>
               </div>
             ) : (
@@ -966,7 +929,9 @@ export default function CompaniesPage() {
                             <button
                               title="View details"
                               onClick={() =>
-                                openModal("view", company)
+                                router.push(
+                                  `/admin/companies/${company.id}`
+                                )
                               }
                             >
                               <Eye size={16} />
@@ -992,7 +957,7 @@ export default function CompaniesPage() {
                                   onClick={() =>
                                     runCompanyAction(
                                       company,
-                                      "approve",
+                                      "approve"
                                     )
                                   }
                                 >
@@ -1030,7 +995,7 @@ export default function CompaniesPage() {
                                   company,
                                   company.isActive
                                     ? "deactivate"
-                                    : "activate",
+                                    : "activate"
                                 )
                               }
                             >

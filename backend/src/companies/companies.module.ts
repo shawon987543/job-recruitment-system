@@ -3,12 +3,17 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MailModule } from '../mail/mail.module';
 import { Company } from './entities/company.entity';
 import { User } from '../users/entities/user.entity';
+import { CompanyAdminApplication } from '../users/entities/company-admin-application.entity';
 import { CompaniesController } from './companies.controller';
 import { CompaniesService } from './companies.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Company, User]),
+    TypeOrmModule.forFeature([
+      Company,
+      User,
+      CompanyAdminApplication,
+    ]),
     MailModule,
   ],
   controllers: [CompaniesController],

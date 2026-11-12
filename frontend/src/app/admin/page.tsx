@@ -1,20 +1,21 @@
+
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import AdminSidebar from "../../components/admin/AdminSidebar";
+import CompanyAdminsContent from "@/components/admin/CompanyAdminsContent";
+
 import {
-  LayoutDashboard,
   Building2,
   Users,
   BriefcaseBusiness,
   FileText,
-  BarChart3,
-  Settings,
-  LogOut,
-  RefreshCw,
   Menu,
-  X,
 } from "lucide-react";
+
+import { StatsSkeleton } from "@/components/ui/stats-skeleton";
+import { DetailSkeleton } from "@/components/ui/detail-skeleton";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -51,24 +52,144 @@ interface DashboardStats {
   };
 }
 
-const navigation = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
-  { label: "Companies", icon: Building2, path: "/admin/companies" },
-  { label: "Users", icon: Users, path: "/admin/users" },
-  { label: "Company Admins", icon: Users, path: "/admin/company-admin" },
-  { label: "Jobs", icon: BriefcaseBusiness, path: "/admin/jobs" },
-  { label: "Applications", icon: FileText, path: "/admin/applications" },
-  { label: "Reports", icon: BarChart3, path: "/admin/reports" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
-];
+// Donut Chart Component
 
-export default function AdminPage() {
+interface DonutSegment {
+  label: string;
+  value: number;
+  color: string;
+}
+
+function DonutChart({
+  title,
+  segments,
+}: {
+  title: string;
+  segments: DonutSegment[];
+}) {
+  const total = segments.reduce(
+    (sum, segment) => sum + segment.value,
+    0
+  );
+
+  let current = 0;
+
+  const gradient =
+    total === 0
+      ? "#e2e8f0"
+      : `conic-gradient(${segments
+          .map((segment) => {
+            const start = current;
+            current += (segment.value / total) * 100;
+
+            return `${segment.color} ${start}% ${current}%`;
+          })
+          .join(", ")})`;
+
+  return (
+    <div className="admin-detail-card">
+      <h3>{title}</h3>
+
+      <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-5">
+        {/* Donut Chart */}
+        <div
+          className="relative shrink-0 rounded-full"
+          style={{
+            width: "170px",
+            height: "170px",
+            background: gradient,
+          }}
+        >
+          <div
+            className="absolute rounded-full bg-white flex flex-col items-center justify-center"
+            style={{ inset: "25px" }}
+          >
+            <strong className="text-2xl font-bold text-slate-800">
+              {total.toLocaleString()}
+            </strong>
+
+            <span className="text-xs text-slate-500">
+              Total
+            </span>
+          </div>
+        </div>
+
+        {/* Chart Legend */}
+        <div className="flex flex-col gap-3 w-full">
+          {segments.map((segment) => (
+            <div
+              key={segment.label}
+              className="flex items-center justify-between gap-3"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className="w-3 h-3 rounded-full shrink-0"
+                  style={{ backgroundColor: segment.color }}
+                />
+
+                <span className="text-sm text-slate-600">
+                  {segment.label}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <strong className="text-sm text-slate-800">
+                  {segment.value.toLocaleString()}
+                </strong>
+
+                <span className="text-xs text-slate-400">
+                  {total > 0
+                    ? `${Math.round(
+                        (segment.value / total) * 100
+                      )}%`
+                    : "0%"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Initial Loading UI
+function AdminInitialSkeleton() {
+  return (
+    <div className="admin-layout">
+      <main className="admin-main">
+        <header className="admin-topbar">
+          <div className="admin-topbar-details">
+            <h1>Loading Admin Panel</h1>
+            <p>Please wait while your page loads...</p>
+          </div>
+        </header>
+
+        <section className="admin-content">
+          <StatsSkeleton />
+          <DetailSkeleton />
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function AdminPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Read the section directly from the URL.
+  // No useEffect or default Dashboard flash.
+  const activeSection =
+    searchParams.get("section") === "company-admin"
+      ? "company-admins"
+      : "dashboard";
 
   const clearSession = () => {
     sessionStorage.removeItem("access_token");
@@ -76,26 +197,7 @@ export default function AdminPage() {
     sessionStorage.removeItem("user");
   };
 
-  const logout = async () => {
-    const token = sessionStorage.getItem("access_token");
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Clear the local session even if the API request fails.
-    } finally {
-      clearSession();
-      router.push("/login");
-    }
-  };
-
+  // Fetch Dashboard Data
   const fetchDashboard = async () => {
     setLoading(true);
     setError("");
@@ -118,26 +220,38 @@ export default function AdminPage() {
         cache: "no-store",
       });
 
-      // Refresh the access token if it has expired.
+      // Refresh access token if expired.
       if (response.status === 401 && refreshToken) {
-        const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ refreshToken }),
-        });
+        const refreshResponse = await fetch(
+          `${API_URL}/auth/refresh`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refreshToken }),
+          }
+        );
 
         if (!refreshResponse.ok) {
-          throw new Error("Your session has expired. Please log in again.");
+          throw new Error(
+            "Your session has expired. Please log in again."
+          );
         }
 
         const refreshed = await refreshResponse.json();
 
         accessToken = refreshed.access_token;
 
-        sessionStorage.setItem("access_token", refreshed.access_token);
-        sessionStorage.setItem("refresh_token", refreshed.refresh_token);
+        sessionStorage.setItem(
+          "access_token",
+          refreshed.access_token
+        );
+
+        sessionStorage.setItem(
+          "refresh_token",
+          refreshed.refresh_token
+        );
 
         response = await fetch(`${API_URL}/admin/dashboard`, {
           headers: {
@@ -148,18 +262,25 @@ export default function AdminPage() {
       }
 
       if (response.status === 401 || response.status === 403) {
-        throw new Error("You are not authorized to access this dashboard.");
+        throw new Error(
+          "You are not authorized to access this dashboard."
+        );
       }
 
       if (!response.ok) {
-        throw new Error("Unable to load dashboard information.");
+        throw new Error(
+          "Unable to load dashboard information."
+        );
       }
 
       const data: DashboardStats = await response.json();
+
       setStats(data);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Something went wrong.";
+        err instanceof Error
+          ? err.message
+          : "Something went wrong.";
 
       if (message.includes("session has expired")) {
         clearSession();
@@ -173,10 +294,12 @@ export default function AdminPage() {
     }
   };
 
+  // Authentication
   useEffect(() => {
     const userData = sessionStorage.getItem("user");
+    const accessToken = sessionStorage.getItem("access_token");
 
-    if (!userData || !sessionStorage.getItem("access_token")) {
+    if (!userData || !accessToken) {
       clearSession();
       router.replace("/login");
       return;
@@ -189,119 +312,47 @@ export default function AdminPage() {
         router.replace("/");
         return;
       }
+
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthReady(true);
     } catch {
       clearSession();
       router.replace("/login");
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch dashboard ONLY when Dashboard is selected.
+  useEffect(() => {
+    if (!authReady || activeSection !== "dashboard") {
       return;
     }
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchDashboard();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authReady, activeSection]);
 
-  const statCards = stats
-    ? [
-        {
-          title: "Total Users",
-          value: stats.users.total,
-          detail: `${stats.users.active} active users`,
-          icon: Users,
-          color: "blue",
-        },
-        {
-          title: "Total Companies",
-          value: stats.companies.total,
-          detail: `${stats.companies.pending} pending approval`,
-          icon: Building2,
-          color: "purple",
-        },
-        {
-          title: "Total Jobs",
-          value: stats.jobs.total,
-          detail: `${stats.jobs.published} published jobs`,
-          icon: BriefcaseBusiness,
-          color: "green",
-        },
-        {
-          title: "Applications",
-          value: stats.applications.total,
-          detail: `${stats.applications.pending} pending review`,
-          icon: FileText,
-          color: "orange",
-        },
-      ]
-    : [];
+  // Navigate to Company Admins
+  const handleCompanyAdminsClick = () => {
+    router.push("/admin?section=company-admin");
+  };
 
+  // Keep the page shell and skeleton visible during authentication.
   return (
     <div className="admin-layout">
-      <aside className={`admin-sidebar ${menuOpen ? "open" : ""}`}>
-        <div className="admin-brand">
-          <div className="admin-brand-icon">
-            <BriefcaseBusiness size={23} />
-          </div>
-
-          <div className="admin-brand-text">
-            <h2>CareerHub</h2>
-            <p>SUPER-ADMIN PORTAL</p>
-          </div>
-
-          <button
-            className="admin-close-menu"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="admin-nav-label">MENU</div>
-
-        <nav className="admin-navigation">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            const isActive = item.path === "/admin";
-
-            return (
-              <Link
-                key={item.label}
-                href={item.path}
-                className={`admin-nav-item ${isActive ? "active" : ""}`}
-                onClick={() => setMenuOpen(false)}
-              >
-                <Icon size={19} />
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="admin-sidebar-bottom">
-          <div className="admin-profile">
-            <div className="admin-avatar">SA</div>
-
-            <div className="admin-profile-info">
-              <strong>Super Admin</strong>
-              <span>Administrator</span>
-            </div>
-          </div>
-
-          <button className="admin-logout" onClick={logout}>
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {menuOpen && (
-        <button
-          className="admin-overlay"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
-      )}
+      {/* Admin Sidebar */}
+      <AdminSidebar
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+        activeSection={activeSection}
+        onCompanyAdminsClick={handleCompanyAdminsClick}
+      />
 
       <main className="admin-main">
+        {/* Topbar */}
         <header className="admin-topbar">
           <button
             className="admin-menu-button"
@@ -311,188 +362,294 @@ export default function AdminPage() {
             <Menu size={22} />
           </button>
 
-          <div>
-            <h1>Dashboard Overview</h1>
-            <p>Welcome back! Here&apos;s what&apos;s happening today.</p>
-          </div>
+          <div className="admin-topbar-details">
+            <h1>
+              {activeSection === "company-admins"
+                ? "Company Admins"
+                : "Dashboard Overview"}
+            </h1>
 
-          <button
-            className="admin-refresh"
-            onClick={fetchDashboard}
-            disabled={loading}
-          >
-            <RefreshCw size={16} />
-            <span>Refresh</span>
-          </button>
+            <p>
+              {activeSection === "company-admins"
+                ? "Manage administrator accounts and company access"
+                : "Monitor and manage your recruitment platform"}
+            </p>
+          </div>
         </header>
 
+        {/* Main Content */}
         <section className="admin-content">
-          {error && (
-            <div className="admin-error">
-              <span>{error}</span>
-              <button onClick={fetchDashboard}>Try again</button>
-            </div>
-          )}
-
-          <div className="admin-welcome">
-            <div>
-              <span className="admin-welcome-label">SUPER ADMIN PANEL</span>
-              <h2>Manage your recruitment platform</h2>
-              <p>
-                Monitor users, companies, jobs, and applications from one
-                place.
-              </p>
-            </div>
-
-            <div className="admin-welcome-decoration">CH</div>
-          </div>
-
-          <div className="admin-section-heading">
-            <div>
-              <h2>Platform Statistics</h2>
-              <p>Overview of your platform activity</p>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="admin-loading">Loading dashboard data...</div>
-          ) : stats ? (
+          {!authReady ? (
             <>
-              <div className="admin-stats-grid">
-                {statCards.map((card) => {
-                  const Icon = card.icon;
+              <StatsSkeleton />
+              <DetailSkeleton />
+            </>
+          ) : activeSection === "company-admins" ? (
+            // Company Admins Content
+            <CompanyAdminsContent />
+          ) : (
+            // Dashboard Content
+            <>
+              {/* Error Message */}
+              {error && (
+                <div className="admin-error">
+                  <span>{error}</span>
 
-                  return (
-                    <div className="admin-stat-card" key={card.title}>
-                      <div className={`admin-stat-icon ${card.color}`}>
-                        <Icon size={22} />
-                      </div>
+                  <button onClick={fetchDashboard}>
+                    Try again
+                  </button>
+                </div>
+              )}
 
-                      <p>{card.title}</p>
-                      <h3>{card.value.toLocaleString()}</h3>
-                      <span>{card.detail}</span>
-                    </div>
-                  );
-                })}
+              {/* Admin Welcome */}
+              <div className="admin-welcome">
+                <div>
+                  <span className="admin-welcome-label">
+                    SUPER ADMIN PANEL
+                  </span>
+
+                  <h2>
+                    Manage your recruitment platform
+                  </h2>
+
+                  <p>
+                    Monitor users, companies, jobs, and applications
+                    from one place.
+                  </p>
+                </div>
+
+                <div className="admin-welcome-decoration">
+                  CH
+                </div>
               </div>
 
+              {/* Users & Applications Analytics */}
+              {stats && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                  {/* Users Distribution */}
+                  <DonutChart
+                    title="Users Distribution"
+                    segments={[
+                      {
+                        label: "Candidates",
+                        value: stats.users.candidates,
+                        color: "#3b82f6",
+                      },
+                      {
+                        label: "Company Admins",
+                        value: stats.users.companyAdmins,
+                        color: "#8b5cf6",
+                      },
+                      {
+                        label: "Super Admins",
+                        value: stats.users.superAdmins,
+                        color: "#f59e0b",
+                      },
+                    ]}
+                  />
+
+                  {/* Applications Distribution */}
+                  <DonutChart
+                    title="Applications Distribution"
+                    segments={[
+                      {
+                        label: "Pending",
+                        value: stats.applications.pending,
+                        color: "#f59e0b",
+                      },
+                      {
+                        label: "Shortlisted",
+                        value: stats.applications.shortlisted,
+                        color: "#3b82f6",
+                      },
+                      {
+                        label: "Interview",
+                        value: stats.applications.interview,
+                        color: "#8b5cf6",
+                      },
+                      {
+                        label: "Selected",
+                        value: stats.applications.selected,
+                        color: "#10b981",
+                      },
+                      {
+                        label: "Rejected",
+                        value: stats.applications.rejected,
+                        color: "#ef4444",
+                      },
+                      {
+                        label: "Withdrawn",
+                        value: stats.applications.withdrawn,
+                        color: "#64748b",
+                      },
+                    ]}
+                  />
+                </div>
+              )}
+
+              {/* Platform Statistics Heading */}
               <div className="admin-section-heading">
                 <div>
-                  <h2>Detailed Overview</h2>
-                  <p>Current status across the platform</p>
+                  <h2>Platform Statistics</h2>
+                  <p>Overview of your platform activity</p>
                 </div>
               </div>
 
-              <div className="admin-details-grid">
-                <div className="admin-detail-card">
-                  <h3>Users</h3>
+              {/* Dashboard Content */}
+              {loading ? (
+                <>
+                  <StatsSkeleton />
+                  <DetailSkeleton />
+                </>
+              ) : stats ? (
+                <>
+                  {/* Statistics Cards */}
+                  <div className="admin-stats-grid">
+                    {[
+                      {
+                        title: "Total Users",
+                        value: stats.users.total,
+                        detail: `${stats.users.active} active users`,
+                        icon: Users,
+                        color: "blue",
+                      },
+                      {
+                        title: "Total Companies",
+                        value: stats.companies.total,
+                        detail: `${stats.companies.pending} pending approval`,
+                        icon: Building2,
+                        color: "purple",
+                      },
+                      {
+                        title: "Total Jobs",
+                        value: stats.jobs.total,
+                        detail: `${stats.jobs.published} published jobs`,
+                        icon: BriefcaseBusiness,
+                        color: "green",
+                      },
+                      {
+                        title: "Applications",
+                        value: stats.applications.total,
+                        detail: `${stats.applications.pending} pending review`,
+                        icon: FileText,
+                        color: "orange",
+                      },
+                    ].map((card) => {
+                      const Icon = card.icon;
 
-                  <div className="admin-detail-row">
-                    <span>Candidates</span>
-                    <strong>{stats.users.candidates}</strong>
+                      return (
+                        <div
+                          className="admin-stat-card"
+                          key={card.title}
+                        >
+                          <div
+                            className={`admin-stat-icon ${card.color}`}
+                          >
+                            <Icon size={22} />
+                          </div>
+
+                          <p>{card.title}</p>
+
+                          <h3>
+                            {card.value.toLocaleString()}
+                          </h3>
+
+                          <span>{card.detail}</span>
+                        </div>
+                      );
+                    })}
                   </div>
 
-                  <div className="admin-detail-row">
-                    <span>Company Admins</span>
-                    <strong>{stats.users.companyAdmins}</strong>
+                  {/* Detailed Overview Heading */}
+                  <div className="admin-section-heading">
+                    <div>
+                      <h2>Detailed Overview</h2>
+                      <p>
+                        Current status across the platform
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="admin-detail-row">
-                    <span>Super Admins</span>
-                    <strong>{stats.users.superAdmins}</strong>
-                  </div>
+                  {/* Detailed Overview Cards */}
+                  <div className="grid grid-cols-2 gap-4.5">
+                    {/* Companies */}
+                    <div className="admin-detail-card">
+                      <h3>Companies</h3>
 
-                  <div className="admin-detail-row">
-                    <span>Active Users</span>
-                    <strong>{stats.users.active}</strong>
+                      <div className="admin-detail-row">
+                        <span>Approved</span>
+                        <strong>
+                          {stats.companies.approved}
+                        </strong>
+                      </div>
+
+                      <div className="admin-detail-row">
+                        <span>Pending</span>
+                        <strong>
+                          {stats.companies.pending}
+                        </strong>
+                      </div>
+
+                      <div className="admin-detail-row">
+                        <span>Rejected</span>
+                        <strong>
+                          {stats.companies.rejected}
+                        </strong>
+                      </div>
+
+                      <div className="admin-detail-row">
+                        <span>Active</span>
+                        <strong>
+                          {stats.companies.active}
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Jobs */}
+                    <div className="admin-detail-card">
+                      <h3>Jobs</h3>
+
+                      <div className="admin-detail-row">
+                        <span>Published</span>
+                        <strong>
+                          {stats.jobs.published}
+                        </strong>
+                      </div>
+
+                      <div className="admin-detail-row">
+                        <span>Draft</span>
+                        <strong>
+                          {stats.jobs.draft}
+                        </strong>
+                      </div>
+
+                      <div className="admin-detail-row">
+                        <span>Closed</span>
+                        <strong>
+                          {stats.jobs.closed}
+                        </strong>
+                      </div>
+                    </div>
                   </div>
+                </>
+              ) : (
+                <div className="admin-loading">
+                  No dashboard data available.
                 </div>
-
-                <div className="admin-detail-card">
-                  <h3>Companies</h3>
-
-                  <div className="admin-detail-row">
-                    <span>Approved</span>
-                    <strong>{stats.companies.approved}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Pending</span>
-                    <strong>{stats.companies.pending}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Rejected</span>
-                    <strong>{stats.companies.rejected}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Active</span>
-                    <strong>{stats.companies.active}</strong>
-                  </div>
-                </div>
-
-                <div className="admin-detail-card">
-                  <h3>Jobs</h3>
-
-                  <div className="admin-detail-row">
-                    <span>Published</span>
-                    <strong>{stats.jobs.published}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Draft</span>
-                    <strong>{stats.jobs.draft}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Closed</span>
-                    <strong>{stats.jobs.closed}</strong>
-                  </div>
-                </div>
-
-                <div className="admin-detail-card">
-                  <h3>Applications</h3>
-
-                  <div className="admin-detail-row">
-                    <span>Pending</span>
-                    <strong>{stats.applications.pending}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Shortlisted</span>
-                    <strong>{stats.applications.shortlisted}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Interview</span>
-                    <strong>{stats.applications.interview}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Selected</span>
-                    <strong>{stats.applications.selected}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Rejected</span>
-                    <strong>{stats.applications.rejected}</strong>
-                  </div>
-
-                  <div className="admin-detail-row">
-                    <span>Withdrawn</span>
-                    <strong>{stats.applications.withdrawn}</strong>
-                  </div>
-                </div>
-              </div>
+              )}
             </>
-          ) : (
-            <div className="admin-loading">
-              No dashboard data available.
-            </div>
           )}
         </section>
       </main>
     </div>
+  );
+}
+
+// Page component with Suspense for useSearchParams
+export default function AdminPage() {
+  return (
+    <Suspense fallback={<AdminInitialSkeleton />}>
+      <AdminPageContent />
+    </Suspense>
   );
 }

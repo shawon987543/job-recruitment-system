@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   CalendarDays,
   Mail,
-  UserRound,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 
@@ -215,15 +214,8 @@ export default function CandidatesPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          className="ca-candidates-refresh"
-          onClick={loadCandidates}
-          disabled={loading}
-        >
-          <RefreshCw size={17} className={loading ? "ca-spinning" : ""} />
-          Refresh
-        </button>
+       {/**Refresh button */}
+       
       </div>
 
       {error && (

@@ -1,7 +1,5 @@
-
 "use client";
-
-import { FormEvent, useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -79,7 +77,9 @@ export default function LoginPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to log in");
     } finally {
-      setLoading(false);
+        setTimeout(()=>{
+          setLoading(false);
+        }, 2000);
     }
   }
 
@@ -352,6 +352,10 @@ export default function LoginPage() {
           .signup-grid {
             grid-template-columns: 1fr;
           }
+
+          .login-card {
+            padding: 32px 22px 24px;
+          }
         }
       `}</style>
 
@@ -369,11 +373,12 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin}>
-          <label>Email address</label>
+          <label htmlFor="login-email">Email address</label>
 
           <div className="login-input">
             <Mail size={18} />
             <input
+              id="login-email"
               type="email"
               name="login-email"
               autoComplete="off"
@@ -384,12 +389,13 @@ export default function LoginPage() {
             />
           </div>
 
-          <label>Password</label>
+          <label htmlFor="login-password">Password</label>
 
           <div className="login-input">
             <LockKeyhole size={18} />
 
             <input
+              id="login-password"
               type={showPassword ? "text" : "password"}
               name="login-password"
               autoComplete="current-password"
@@ -421,7 +427,11 @@ export default function LoginPage() {
 
           {error && <p className="login-error">{error}</p>}
 
-          <button className="login-submit" disabled={loading}>
+          <button
+            type="submit"
+            className="login-submit"
+            disabled={loading}
+          >
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>

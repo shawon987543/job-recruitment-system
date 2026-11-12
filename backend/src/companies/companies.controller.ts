@@ -9,8 +9,11 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
+  Search,
   UseGuards,
 } from '@nestjs/common';
+import { CompanyStatus } from '../common/enums/company-status.enum';
 import { RegisterCompanyAdminDto } from './dto/register-company-admin.dto';
 import { Put } from '@nestjs/common';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -56,7 +59,12 @@ removeCompanyAdmin(
 @Get()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.SUPER_ADMIN)
-findAll() {
+findAll(
+  @Query('search') search?: string,
+  @Query('status') status?: CompanyStatus,
+) {
+  void search;
+  void status;
   return this.companiesService.findAll();
 }
 
@@ -123,6 +131,47 @@ updateActiveStatus(
   ) {
     return this.companiesService.registerCompanyAdmin(dto);
   }
+
+  
+  // List pending additional Company Admin applications.
+  @Get('admin-applications')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  findAdminApplications() {
+    return this.companiesService.findAdminApplications();
+  }
+
+  // Approve an additional Company Admin application.
+  @Patch('admin-applications/:id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  approveAdminApplication(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.companiesService.approveAdminApplication(
+      id,
+      user.userId,
+    );
+  }
+
+  // Reject an additional Company Admin application.
+  @Patch('admin-applications/:id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN)
+  rejectAdminApplication(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: RejectCompanyDto,
+  ) {
+    return this.companiesService.rejectAdminApplication(
+      id,
+      user.userId,
+      dto.reason,
+    );
+  }
+
+
 
   @Patch(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)

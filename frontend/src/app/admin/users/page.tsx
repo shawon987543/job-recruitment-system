@@ -1,6 +1,8 @@
 
 "use client";
 
+import { StatsSkeleton } from "@/components/ui/stats-skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -9,18 +11,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import AdminSidebar from "../../../components/admin/AdminSidebar";
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  BriefcaseBusiness,
-  FileText,
-  BarChart3,
-  Settings,
-  LogOut,
   Search,
-  RefreshCw,
   Eye,
   Pencil,
   Power,
@@ -34,6 +27,7 @@ import {
   Mail,
   Phone,
   Globe,
+  Users,
 } from "lucide-react";
 
 const API_URL =
@@ -126,7 +120,7 @@ export default function UsersPage() {
         clearSession();
         router.replace("/login");
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
@@ -153,14 +147,14 @@ export default function UsersPage() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ refreshToken }),
-          },
+          }
         );
 
         if (!refreshResponse.ok) {
           clearSession();
           router.replace("/login");
           throw new Error(
-            "Your session has expired. Please log in again.",
+            "Your session has expired. Please log in again."
           );
         }
 
@@ -176,7 +170,7 @@ export default function UsersPage() {
           clearSession();
           router.replace("/login");
           throw new Error(
-            "Unable to refresh your session. Please log in again.",
+            "Unable to refresh your session. Please log in again."
           );
         }
 
@@ -184,11 +178,11 @@ export default function UsersPage() {
 
         sessionStorage.setItem(
           "access_token",
-          refreshed.access_token,
+          refreshed.access_token
         );
         sessionStorage.setItem(
           "refresh_token",
-          refreshed.refresh_token,
+          refreshed.refresh_token
         );
 
         response = await sendRequest(token);
@@ -198,19 +192,19 @@ export default function UsersPage() {
         clearSession();
         router.replace("/login");
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
       if (response.status === 403) {
         throw new Error(
-          "You are not authorized to perform this action.",
+          "You are not authorized to perform this action."
         );
       }
 
       return response;
     },
-    [clearSession, router],
+    [clearSession, router]
   );
 
   // Load all users
@@ -232,7 +226,7 @@ export default function UsersPage() {
         clearSession();
         router.replace("/login");
         throw new Error(
-          "Your session has expired. Please log in again.",
+          "Your session has expired. Please log in again."
         );
       }
 
@@ -249,7 +243,7 @@ export default function UsersPage() {
       if (loggedInUser.role !== "SUPER_ADMIN") {
         router.replace("/");
         throw new Error(
-          "You are not authorized to manage users.",
+          "You are not authorized to manage users."
         );
       }
 
@@ -258,7 +252,7 @@ export default function UsersPage() {
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Unable to load users.",
+          result.message || "Unable to load users."
         );
       }
 
@@ -281,7 +275,7 @@ export default function UsersPage() {
 
     queryFn: async () => {
       const response = await apiRequest(
-        "/users/company-admin-requests",
+        "/users/company-admin-requests"
       );
 
       const result = await response.json().catch(() => []);
@@ -289,7 +283,7 @@ export default function UsersPage() {
       if (!response.ok) {
         throw new Error(
           result.message ||
-            "Unable to load Company Admin requests.",
+            "Unable to load Company Admin requests."
         );
       }
 
@@ -312,14 +306,14 @@ export default function UsersPage() {
       }
 
       const response = await apiRequest(
-        `/users/${selectedUser.id}`,
+        `/users/${selectedUser.id}`
       );
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Unable to load user details.",
+          result.message || "Unable to load user details."
         );
       }
 
@@ -362,14 +356,14 @@ export default function UsersPage() {
         {
           method: "PATCH",
           body: JSON.stringify({ isActive }),
-        },
+        }
       );
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Unable to update user status.",
+          result.message || "Unable to update user status."
         );
       }
 
@@ -378,7 +372,7 @@ export default function UsersPage() {
 
     onSuccess: async (result) => {
       showMessage(
-        result.message || "User status updated successfully.",
+        result.message || "User status updated successfully."
       );
       await refreshUsers();
     },
@@ -387,7 +381,7 @@ export default function UsersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to update user status.",
+          : "Unable to update user status."
       );
     },
   });
@@ -409,7 +403,7 @@ export default function UsersPage() {
         throw new Error(
           Array.isArray(result.message)
             ? result.message.join(", ")
-            : result.message || "Unable to update user.",
+            : result.message || "Unable to update user."
         );
       }
 
@@ -421,7 +415,7 @@ export default function UsersPage() {
       setSelectedUser(null);
 
       showMessage(
-        result.message || "User updated successfully.",
+        result.message || "User updated successfully."
       );
 
       await refreshUsers();
@@ -431,7 +425,7 @@ export default function UsersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to update user.",
+          : "Unable to update user."
       );
     },
   });
@@ -443,14 +437,14 @@ export default function UsersPage() {
         `/companies/${request.id}/approve`,
         {
           method: "PATCH",
-        },
+        }
       );
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Unable to approve the request.",
+          result.message || "Unable to approve the request."
         );
       }
 
@@ -459,12 +453,12 @@ export default function UsersPage() {
 
     onSuccess: async (result) => {
       showMessage(
-        result.message || "Company Admin request approved.",
+        result.message || "Company Admin request approved."
       );
 
       if (result.emailSent === false) {
         setError(
-          "The account was approved, but the temporary-password email could not be sent. Email delivery needs to be resolved.",
+          "The account was approved, but the temporary-password email could not be sent. Email delivery needs to be resolved."
         );
       }
 
@@ -475,7 +469,7 @@ export default function UsersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to approve the request.",
+          : "Unable to approve the request."
       );
     },
   });
@@ -491,14 +485,14 @@ export default function UsersPage() {
         {
           method: "PATCH",
           body: JSON.stringify({ reason }),
-        },
+        }
       );
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          result.message || "Unable to reject the request.",
+          result.message || "Unable to reject the request."
         );
       }
 
@@ -507,7 +501,7 @@ export default function UsersPage() {
 
     onSuccess: async (result) => {
       showMessage(
-        result.message || "Company Admin request rejected.",
+        result.message || "Company Admin request rejected."
       );
 
       await refreshUsers();
@@ -517,17 +511,17 @@ export default function UsersPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to reject the request.",
+          : "Unable to reject the request."
       );
     },
   });
 
   // Approve request after confirmation
   const handleApproveRequest = (
-    request: CompanyAdminRequest,
+    request: CompanyAdminRequest
   ) => {
     const confirmed = window.confirm(
-      `Are you sure you want to approve ${request.name} and create a Company Admin account for ${request.adminEmail}?`,
+      `Are you sure you want to approve ${request.name} and create a Company Admin account for ${request.adminEmail}?`
     );
 
     if (!confirmed) return;
@@ -540,17 +534,17 @@ export default function UsersPage() {
 
   // Reject request after collecting a reason
   const handleRejectRequest = (
-    request: CompanyAdminRequest,
+    request: CompanyAdminRequest
   ) => {
     const reason = window.prompt(
-      `Enter the rejection reason for ${request.name}:`,
+      `Enter the rejection reason for ${request.name}:`
     );
 
     if (reason === null) return;
 
     if (reason.trim().length < 5) {
       setError(
-        "Rejection reason must be at least 5 characters.",
+        "Rejection reason must be at least 5 characters."
       );
       return;
     }
@@ -590,7 +584,7 @@ export default function UsersPage() {
   const toggleUserStatus = (user: User) => {
     if (user.role === "SUPER_ADMIN") {
       setError(
-        "Super Admin accounts cannot be deactivated through this page.",
+        "Super Admin accounts cannot be deactivated through this page."
       );
       return;
     }
@@ -628,28 +622,6 @@ export default function UsersPage() {
     });
   };
 
-  // Logout
-  const logout = async () => {
-    const token = sessionStorage.getItem("access_token");
-
-    try {
-      if (token) {
-        await fetch(`${API_URL}/auth/logout`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-      }
-    } catch {
-      // Clear local session even if the API request fails.
-    } finally {
-      clearSession();
-      queryClient.clear();
-      router.push("/login");
-    }
-  };
-
   // Search and role filtering
   const filteredUsers = users.filter((user) => {
     const searchTerm = search.toLowerCase();
@@ -669,10 +641,10 @@ export default function UsersPage() {
   const counts = {
     total: users.length,
     candidates: users.filter(
-      (user) => user.role === "CANDIDATE",
+      (user) => user.role === "CANDIDATE"
     ).length,
     companyAdmins: users.filter(
-      (user) => user.role === "COMPANY_ADMIN",
+      (user) => user.role === "COMPANY_ADMIN"
     ).length,
     active: users.filter((user) => user.isActive).length,
     inactive: users.filter((user) => !user.isActive).length,
@@ -706,121 +678,11 @@ export default function UsersPage() {
 
   return (
     <div className="admin-layout">
-      {/* Sidebar */}
-      <aside
-        className={`admin-sidebar ${menuOpen ? "open" : ""}`}
-      >
-        <div className="admin-brand">
-          <div className="admin-brand-icon">C</div>
+      <AdminSidebar
+        menuOpen={menuOpen}
+        setMenuOpen={setMenuOpen}
+      />
 
-          <div>
-            <h2>CareerHub</h2>
-            <span>Admin Portal</span>
-          </div>
-
-          <button
-            className="admin-close-menu"
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="admin-nav-label">MENU</div>
-
-        <nav className="admin-navigation">
-          <Link
-            href="/admin"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <LayoutDashboard size={19} />
-            <span>Dashboard</span>
-          </Link>
-
-          <Link
-            href="/admin/companies"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Building2 size={19} />
-            <span>Companies</span>
-          </Link>
-
-          <Link
-            href="/admin/users"
-            className="admin-nav-item active"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Users size={19} />
-            <span>Users</span>
-          </Link>
-
-          <Link
-            href="/admin/jobs"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BriefcaseBusiness size={19} />
-            <span>Jobs</span>
-          </Link>
-
-          <Link
-            href="/admin/applications"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <FileText size={19} />
-            <span>Applications</span>
-          </Link>
-
-          <Link
-            href="/admin/reports"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <BarChart3 size={19} />
-            <span>Reports</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="admin-nav-item"
-            onClick={() => setMenuOpen(false)}
-          >
-            <Settings size={19} />
-            <span>Settings</span>
-          </Link>
-        </nav>
-
-        <div className="admin-sidebar-bottom">
-          <div className="admin-profile">
-            <div className="admin-avatar">SA</div>
-
-            <div className="admin-profile-info">
-              <strong>Super Admin</strong>
-              <span>Administrator</span>
-            </div>
-          </div>
-
-          <button className="admin-logout" onClick={logout}>
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile overlay */}
-      {menuOpen && (
-        <button
-          className="admin-overlay"
-          onClick={() => setMenuOpen(false)}
-          aria-label="Close navigation"
-        />
-      )}
-
-      {/* Main content */}
       <main className="admin-main">
         <header className="admin-topbar">
           <button
@@ -837,34 +699,6 @@ export default function UsersPage() {
               Manage candidates, company administrators and accounts.
             </p>
           </div>
-
-          <button
-            className="admin-refresh"
-            onClick={() => {
-              void Promise.all([
-                loadUsers(),
-                loadCompanyAdminRequests(),
-              ]);
-            }}
-            disabled={
-              isFetching ||
-              isRequestsFetching
-            }
-          >
-            <RefreshCw
-              size={16}
-              className={
-                isFetching || isRequestsFetching
-                  ? "animate-spin"
-                  : ""
-              }
-            />
-            <span>
-              {isFetching || isRequestsFetching
-                ? "Refreshing..."
-                : "Refresh"}
-            </span>
-          </button>
         </header>
 
         <section className="admin-content">
@@ -872,7 +706,6 @@ export default function UsersPage() {
           {displayError && (
             <div className="company-alert error">
               <span>{displayError}</span>
-
               <button onClick={() => setError("")}>
                 <X size={16} />
               </button>
@@ -883,7 +716,6 @@ export default function UsersPage() {
           {success && (
             <div className="company-alert success">
               <span>{success}</span>
-
               <button onClick={() => setSuccess("")}>
                 <X size={16} />
               </button>
@@ -907,65 +739,73 @@ export default function UsersPage() {
           </div>
 
           {/* Summary cards */}
-          <div className="company-summary-grid">
-            <button
-              className={`company-summary-card ${
-                roleFilter === "ALL" ? "selected" : ""
-              }`}
-              onClick={() => setRoleFilter("ALL")}
-            >
-              <span className="company-summary-icon blue">
-                <Users size={21} />
-              </span>
-              <span className="company-summary-label">
-                Total Users
-              </span>
-              <strong>{counts.total}</strong>
-            </button>
+          {isLoading || isFetching ? (
+            <StatsSkeleton
+              count={4}
+              containerClassName="company-summary-grid"
+              cardClassName="company-summary-card"
+            />
+          ) : (
+            <div className="company-summary-grid">
+              <button
+                className={`company-summary-card ${
+                  roleFilter === "ALL" ? "selected" : ""
+                }`}
+                onClick={() => setRoleFilter("ALL")}
+              >
+                <span className="company-summary-icon blue">
+                  <Users size={21} />
+                </span>
+                <span className="company-summary-label">
+                  Total Users
+                </span>
+                <strong>{counts.total}</strong>
+              </button>
 
-            <button
-              className={`company-summary-card ${
-                roleFilter === "CANDIDATE" ? "selected" : ""
-              }`}
-              onClick={() => setRoleFilter("CANDIDATE")}
-            >
-              <span className="company-summary-icon green">
-                <UserCheck size={21} />
-              </span>
-              <span className="company-summary-label">
-                Candidates
-              </span>
-              <strong>{counts.candidates}</strong>
-            </button>
+              <button
+                className={`company-summary-card ${
+                  roleFilter === "CANDIDATE" ? "selected" : ""
+                }`}
+                onClick={() => setRoleFilter("CANDIDATE")}
+              >
+                <span className="company-summary-icon green">
+                  <UserCheck size={21} />
+                </span>
+                <span className="company-summary-label">
+                  Candidates
+                </span>
+                <strong>{counts.candidates}</strong>
+              </button>
 
-            <button
-              className={`company-summary-card ${
-                roleFilter === "COMPANY_ADMIN" ? "selected" : ""
-              }`}
-              onClick={() => setRoleFilter("COMPANY_ADMIN")}
-            >
-              <span className="company-summary-icon orange">
-                <ShieldCheck size={21} />
-              </span>
-              <span className="company-summary-label">
-                Company Admins
-              </span>
-              <strong>{counts.companyAdmins}</strong>
-            </button>
+              <button
+                className={`company-summary-card ${
+                  roleFilter === "COMPANY_ADMIN" ? "selected" : ""
+                }`}
+                onClick={() => setRoleFilter("COMPANY_ADMIN")}
+              >
+                <span className="company-summary-icon orange">
+                  <ShieldCheck size={21} />
+                </span>
+                <span className="company-summary-label">
+                  Company Admins
+                </span>
+                <strong>{counts.companyAdmins}</strong>
+              </button>
 
-            <button
-              className="company-summary-card"
-              onClick={() => setRoleFilter("ALL")}
-            >
-              <span className="company-summary-icon red">
-                <UserX size={21} />
-              </span>
-              <span className="company-summary-label">
-                Inactive Users
-              </span>
-              <strong>{counts.inactive}</strong>
-            </button>
-          </div>
+              <button
+                className="company-summary-card"
+                onClick={() => setRoleFilter("ALL")}
+              >
+                <span className="company-summary-icon red">
+                  <UserX size={21} />
+                </span>
+                <span className="company-summary-label">
+                  Inactive Users
+                </span>
+                <strong>{counts.inactive}</strong>
+              </button>
+            </div>
+          )}
 
           {/* Pending Company Admin registration requests */}
           {(roleFilter === "ALL" ||
@@ -973,37 +813,17 @@ export default function UsersPage() {
             <>
               <div className="company-toolbar">
                 <div>
-                  <h2>
-                    Pending Company Admin Requests
-                  </h2>
+                  <h2>Pending Company Admin Requests</h2>
                   <p>
                     {companyAdminRequests.length} pending
                     registration request(s) awaiting review
                   </p>
                 </div>
-
-                <button
-                  className="admin-refresh"
-                  onClick={() => loadCompanyAdminRequests()}
-                  disabled={isRequestsFetching}
-                >
-                  <RefreshCw
-                    size={16}
-                    className={
-                      isRequestsFetching
-                        ? "animate-spin"
-                        : ""
-                    }
-                  />
-                  <span>Refresh Requests</span>
-                </button>
               </div>
 
               <div className="company-table-card">
-                {isRequestsLoading ? (
-                  <div className="admin-loading">
-                    Loading Company Admin requests...
-                  </div>
+                {isRequestsLoading || isRequestsFetching ? (
+                  <TableSkeleton rows={4} columns={6} />
                 ) : isRequestsError ? (
                   <div className="company-empty">
                     <XCircle size={35} />
@@ -1049,9 +869,7 @@ export default function UsersPage() {
                             <td>
                               <div className="company-name-cell">
                                 <div className="company-table-avatar">
-                                  {request.name
-                                    .charAt(0)
-                                    .toUpperCase()}
+                                  {request.name.charAt(0).toUpperCase()}
                                 </div>
 
                                 <div>
@@ -1113,9 +931,7 @@ export default function UsersPage() {
                               </span>
                             </td>
 
-                            <td>
-                              {formatDate(request.createdAt)}
-                            </td>
+                            <td>{formatDate(request.createdAt)}</td>
 
                             <td>
                               <div className="company-actions">
@@ -1163,7 +979,6 @@ export default function UsersPage() {
 
             <div className="company-search">
               <Search size={18} />
-
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -1194,11 +1009,30 @@ export default function UsersPage() {
             ))}
           </div>
 
-          {/* Users table */}
+          {/* All Users table */}
           <div className="company-table-card">
-            {isLoading ? (
-              <div className="admin-loading">
-                Loading users...
+            {isLoading || isFetching ? (
+              <TableSkeleton
+                rows={5}
+                columns={6}
+                wrapperClassName="company-table-scroll"
+                tableClassName="company-table"
+              />
+            ) : isUsersError ? (
+              <div className="company-empty">
+                <XCircle size={35} />
+                <h3>Unable to load users</h3>
+                <p>
+                  {usersError instanceof Error
+                    ? usersError.message
+                    : "Please try refreshing the page."}
+                </p>
+                <button
+                  className="admin-refresh"
+                  onClick={() => loadUsers()}
+                >
+                  Try Again
+                </button>
               </div>
             ) : filteredUsers.length === 0 ? (
               <div className="company-empty">
@@ -1275,18 +1109,14 @@ export default function UsersPage() {
                           <div className="company-actions">
                             <button
                               title="View user details"
-                              onClick={() =>
-                                openModal("view", user)
-                              }
+                              onClick={() => openModal("view", user)}
                             >
                               <Eye size={16} />
                             </button>
 
                             <button
                               title="Edit user"
-                              onClick={() =>
-                                openModal("edit", user)
-                              }
+                              onClick={() => openModal("edit", user)}
                             >
                               <Pencil size={16} />
                             </button>
@@ -1294,9 +1124,7 @@ export default function UsersPage() {
                             {user.role !== "SUPER_ADMIN" && (
                               <button
                                 className={
-                                  user.isActive
-                                    ? "reject"
-                                    : "approve"
+                                  user.isActive ? "reject" : "approve"
                                 }
                                 title={
                                   user.isActive
@@ -1304,9 +1132,7 @@ export default function UsersPage() {
                                     : "Activate user"
                                 }
                                 disabled={statusMutation.isPending}
-                                onClick={() =>
-                                  toggleUserStatus(user)
-                                }
+                                onClick={() => toggleUserStatus(user)}
                               >
                                 <Power size={16} />
                               </button>
@@ -1383,7 +1209,7 @@ export default function UsersPage() {
                       <span>Role</span>
                       <strong>
                         {roleLabel(
-                          userDetails?.role ?? selectedUser.role,
+                          userDetails?.role ?? selectedUser.role
                         )}
                       </strong>
                     </div>
@@ -1420,7 +1246,7 @@ export default function UsersPage() {
                       <span>Joined</span>
                       <strong>
                         {formatDate(
-                          (userDetails ?? selectedUser).createdAt,
+                          (userDetails ?? selectedUser).createdAt
                         )}
                       </strong>
                     </div>
@@ -1429,7 +1255,7 @@ export default function UsersPage() {
                       <span>Last Updated</span>
                       <strong>
                         {formatDate(
-                          (userDetails ?? selectedUser).updatedAt,
+                          (userDetails ?? selectedUser).updatedAt
                         )}
                       </strong>
                     </div>
