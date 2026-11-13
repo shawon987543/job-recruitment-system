@@ -2,8 +2,10 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   Bell,
@@ -17,6 +19,8 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import Skeleton from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/api";
 import "./candidate-dashboard.css";
 
 interface LoggedInUser {
@@ -26,14 +30,33 @@ interface LoggedInUser {
   role: string;
 }
 
+interface CandidateProfilePicture {
+  profilePictureUrl?: string | null;
+}
+
+function profilePictureSrc(pictureUrl?: string | null) {
+  if (!pictureUrl) return "";
+  if (pictureUrl.startsWith("http://") || pictureUrl.startsWith("https://")) {
+    return pictureUrl;
+  }
+
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  const serverUrl = apiUrl.replace(/\/api\/?$/, "");
+
+  return `${serverUrl}${pictureUrl.startsWith("/") ? "" : "/"}${pictureUrl}`;
+}
+
 export default function CandidateDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<LoggedInUser | null>(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
     const token = sessionStorage.getItem("access_token");
     const savedUser = sessionStorage.getItem("user");
 
@@ -52,17 +75,33 @@ export default function CandidateDashboard() {
 
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(parsedUser);
+
+      setLoading(false);
+      void apiRequest("/candidate-profile")
+        .then((profile: CandidateProfilePicture) => {
+          if (isMounted) {
+            setProfilePictureUrl(profile.profilePictureUrl ?? null);
+          }
+        })
+        .catch(() => {
+          // Keep the initials avatar if the profile picture cannot be loaded.
+        });
     } catch {
       router.replace("/login");
     } finally {
       setLoading(false);
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [router]);
 
   function handleLogout() {
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");
+    toast.success("Signed out.");
     router.replace("/login");
   }
 
@@ -77,19 +116,10 @@ export default function CandidateDashboard() {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="candidate-loading">
-        <div className="candidate-loading-spinner" />
-        <p>Preparing your dashboard...</p>
-      </div>
-    );
-  }
+  if (!loading && !user) return null;
 
-  if (!user) return null;
-
-  const firstName = user.name.trim().split(/\s+/)[0] || "Candidate";
-  const initial = user.name.trim().charAt(0).toUpperCase() || "C";
+  const firstName = user?.name?.trim().split(/\s+/)[0] || "Candidate";
+  const initial = user?.name?.trim().charAt(0).toUpperCase() || "C";
 
   return (
     <div className="candidate-layout">
@@ -208,20 +238,24 @@ export default function CandidateDashboard() {
             </button>
 
             <div className="candidate-user-info">
-              <div className="candidate-avatar">{initial}</div>
+              <div className="candidate-avatar">
+                {profilePictureUrl ? (
+                  <Image
+                    src={profilePictureSrc(profilePictureUrl)}
+                    alt=""
+                    width={39}
+                    height={39}
+                    unoptimized
+                  />
+                ) : (
+                  loading ? "C" : initial
+                )}
+              </div>
               <div className="candidate-user-text">
-                <strong>{user.name}</strong>
+                <strong>{loading ? "Candidate" : user?.name}</strong>
                 <span>Candidate</span>
               </div>
             </div>
-
-            <button
-              className="candidate-settings-button"
-              onClick={handleLogout}
-              title="Sign out"
-            >
-              <LogOut size={18} />
-            </button>
           </div>
         </header>
 
@@ -275,47 +309,61 @@ export default function CandidateDashboard() {
             </div>
 
             <div className="candidate-action-grid">
-              <Link
-                href="/candidate/jobs"
-                className="candidate-action-card action-blue"
-              >
-                <div className="candidate-action-icon">
-                  <Search size={23} />
-                </div>
-                <div className="candidate-action-text">
-                  <h3>Explore Jobs</h3>
-                  <p>Discover opportunities that match your skills.</p>
-                </div>
-                <ArrowRight className="candidate-action-arrow" size={19} />
-              </Link>
+              {loading ? (
+                [0, 1, 2].map((item) => (
+                  <div className="candidate-action-card" key={item} aria-hidden="true">
+                    <Skeleton variant="circle" width={45} height={45} />
+                    <div style={{ flex: 1, display: "grid", gap: 9 }}>
+                      <Skeleton variant="text" width="65%" height={16} />
+                      <Skeleton variant="text" width="85%" height={12} />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <Link
+                    href="/candidate/jobs"
+                    className="candidate-action-card action-blue"
+                  >
+                    <div className="candidate-action-icon">
+                      <Search size={23} />
+                    </div>
+                    <div className="candidate-action-text">
+                      <h3>Explore Jobs</h3>
+                      <p>Discover opportunities that match your skills.</p>
+                    </div>
+                    <ArrowRight className="candidate-action-arrow" size={19} />
+                  </Link>
 
-              <Link
-                href="/candidate/applications"
-                className="candidate-action-card action-green"
-              >
-                <div className="candidate-action-icon">
-                  <FileText size={23} />
-                </div>
-                <div className="candidate-action-text">
-                  <h3>My Applications</h3>
-                  <p>Review and track your submitted applications.</p>
-                </div>
-                <ArrowRight className="candidate-action-arrow" size={19} />
-              </Link>
+                  <Link
+                    href="/candidate/applications"
+                    className="candidate-action-card action-green"
+                  >
+                    <div className="candidate-action-icon">
+                      <FileText size={23} />
+                    </div>
+                    <div className="candidate-action-text">
+                      <h3>My Applications</h3>
+                      <p>Review and track your submitted applications.</p>
+                    </div>
+                    <ArrowRight className="candidate-action-arrow" size={19} />
+                  </Link>
 
-              <Link
-                href="/candidate/profile"
-                className="candidate-action-card action-purple"
-              >
-                <div className="candidate-action-icon">
-                  <UserRound size={23} />
-                </div>
-                <div className="candidate-action-text">
-                  <h3>My Profile</h3>
-                  <p>Update your personal details and professional skills.</p>
-                </div>
-                <ArrowRight className="candidate-action-arrow" size={19} />
-              </Link>
+                  <Link
+                    href="/candidate/profile"
+                    className="candidate-action-card action-purple"
+                  >
+                    <div className="candidate-action-icon">
+                      <UserRound size={23} />
+                    </div>
+                    <div className="candidate-action-text">
+                      <h3>My Profile</h3>
+                      <p>Update your personal details and professional skills.</p>
+                    </div>
+                    <ArrowRight className="candidate-action-arrow" size={19} />
+                  </Link>
+                </>
+              )}
 
               {/* Removed the old Education & Experience dashboard card. */}
               
@@ -323,6 +371,24 @@ export default function CandidateDashboard() {
           </section>
 
           <section className="candidate-bottom-grid">
+            {loading ? (
+              <>
+                {[0, 1].map((panel) => (
+                  <div
+                    className="candidate-panel"
+                    key={panel}
+                    aria-hidden="true"
+                    style={{ display: "grid", gap: 18 }}
+                  >
+                    <Skeleton variant="text" width="45%" height={20} />
+                    {[0, 1, 2].map((row) => (
+                      <Skeleton key={row} variant="rectangle" height={48} />
+                    ))}
+                  </div>
+                ))}
+              </>
+            ) : (
+              <>
             <div className="candidate-panel candidate-getting-started">
               <div className="candidate-panel-heading">
                 <div>
@@ -368,11 +434,21 @@ export default function CandidateDashboard() {
 
             <div className="candidate-panel candidate-profile-panel">
               <div className="candidate-profile-panel-icon">
-                <UserRound size={25} />
+                {profilePictureUrl ? (
+                  <Image
+                    src={profilePictureSrc(profilePictureUrl)}
+                    alt=""
+                    width={45}
+                    height={45}
+                    unoptimized
+                  />
+                ) : (
+                  <UserRound size={25} />
+                )}
               </div>
               <span className="candidate-profile-label">YOUR ACCOUNT</span>
-              <h2>{user.name}</h2>
-              <p>{user.email}</p>
+              <h2>{user?.name}</h2>
+              <p>{user?.email}</p>
 
               <div className="candidate-profile-divider" />
 
@@ -393,6 +469,8 @@ export default function CandidateDashboard() {
                 Manage profile <ArrowRight size={16} />
               </Link>
             </div>
+              </>
+            )}
           </section>
 
           <footer className="candidate-footer">

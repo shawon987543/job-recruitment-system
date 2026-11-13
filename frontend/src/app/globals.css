@@ -6,6 +6,8 @@
   --primary: #315efb;
   --muted: #7b8498;
   --border: #e9edf4;
+  --font-body: var(--font-inter), var(--font-plus-jakarta), Arial, sans-serif;
+  --font-heading: var(--font-manrope), var(--font-inter), sans-serif;
 }
 
 * {
@@ -21,7 +23,16 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist), Arial, sans-serif;
+  font-family: var(--font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
 }
 
 button,
@@ -5992,17 +6003,6 @@ a {
   border: 1px solid #c9ead5;
   background: #effaf3;
   color: #18834b;
-}
-
-.ca-profile-loading {
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: #8290a5;
-  font-size: 13px;
 }
 
 .ca-profile-spinner {

@@ -1,5 +1,6 @@
 
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -114,8 +115,8 @@ export default function InterviewsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 

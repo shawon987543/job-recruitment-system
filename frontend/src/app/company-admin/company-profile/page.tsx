@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useEffect, useState } from "react";
 import {
   Building2,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
+import Skeleton from "@/components/ui/skeleton";
 
 interface CompanyProfile {
   id: number;
@@ -50,13 +52,80 @@ const emptyForm: ProfileForm = {
   description: "",
 };
 
+function CompanyProfileSkeleton() {
+  return (
+    <div
+      className="ca-content ca-profile-content"
+      aria-label="Loading company profile"
+      aria-busy="true"
+    >
+      <div className="ca-profile-heading">
+        <div>
+          <h1>Company Profile</h1>
+          <p>Manage your company information and contact details.</p>
+        </div>
+      </div>
+
+      <div className="ca-profile-form">
+        <section className="ca-profile-card">
+          <div className="ca-profile-card-heading">
+            <Skeleton variant="rectangle" width={43} height={43} rounded />
+            <div style={{ display: "grid", gap: 8, flex: 1 }}>
+              <Skeleton variant="text" width={155} height={17} />
+              <Skeleton variant="text" width={205} height={13} />
+            </div>
+          </div>
+          <div className="ca-profile-grid">
+            {[0, 1, 2, 3].map((field) => (
+              <div className="ca-profile-field" key={field}>
+                <Skeleton variant="text" width="38%" height={13} />
+                <Skeleton variant="rectangle" height={43} rounded />
+              </div>
+            ))}
+            <div className="ca-profile-field ca-profile-full">
+              <Skeleton variant="text" width="15%" height={13} />
+              <Skeleton variant="rectangle" height={43} rounded />
+            </div>
+          </div>
+        </section>
+
+        <section className="ca-profile-card">
+          <div className="ca-profile-card-heading">
+            <Skeleton variant="rectangle" width={43} height={43} rounded />
+            <div style={{ display: "grid", gap: 8, flex: 1 }}>
+              <Skeleton variant="text" width={205} height={17} />
+              <Skeleton variant="text" width={245} height={13} />
+            </div>
+          </div>
+          <div className="ca-profile-grid">
+            {[0, 1].map((field) => (
+              <div className="ca-profile-field ca-profile-full" key={field}>
+                <Skeleton variant="text" width="20%" height={13} />
+                <Skeleton
+                  variant="rectangle"
+                  height={field === 0 ? 88 : 135}
+                  rounded
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="ca-profile-actions">
+          <Skeleton variant="rectangle" width={140} height={43} rounded />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CompanyProfilePage() {
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
 
   const loadProfile = useCallback(async () => {
     try {
@@ -141,14 +210,7 @@ export default function CompanyProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className="ca-content ca-profile-content">
-        <div className="ca-profile-loading">
-          <RefreshCw size={22} className="ca-profile-spinner" />
-          <p>Loading company profile...</p>
-        </div>
-      </div>
-    );
+    return <CompanyProfileSkeleton />;
   }
 
   if (!profile && error) {

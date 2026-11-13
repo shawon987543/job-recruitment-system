@@ -1,4 +1,5 @@
 "use client";
+import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -8,6 +9,11 @@ import {
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
+import RichTextEditor from "@/components/ui/rich-text-editor";
+import RichTextContent from "@/components/ui/rich-text-content";
+import { richTextHasContent, sanitizeRichText } from "@/lib/rich-text";
+import Skeleton from "@/components/ui/skeleton";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
   Search,
   RefreshCw,
@@ -108,8 +114,8 @@ export default function JobsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -279,6 +285,7 @@ export default function JobsPage() {
 
   // Update job status.
   const statusMutation = useMutation({
+    onMutate: () => startToastLoading("Updating job status..."),
     mutationFn: async ({
       job,
       status,
@@ -318,14 +325,15 @@ export default function JobsPage() {
 
   // Edit any job.
   const editMutation = useMutation({
+    onMutate: () => startToastLoading("Saving job..."),
     mutationFn: async ({
       jobId,
       form,
     }: EditVariables) => {
       const payload = {
         title: form.title,
-        description: form.description,
-        requirements: form.requirements,
+        description: sanitizeRichText(form.description),
+        requirements: sanitizeRichText(form.requirements),
         location: form.location,
         jobType: form.jobType,
         salaryMin:
@@ -418,6 +426,14 @@ export default function JobsPage() {
     event.preventDefault();
 
     if (!selectedJob) return;
+
+    if (
+      !richTextHasContent(form.description) ||
+      !richTextHasContent(form.requirements)
+    ) {
+      setError("Description and requirements are required.");
+      return;
+    }
 
     if (
       form.salaryMin !== "" &&
@@ -587,7 +603,7 @@ export default function JobsPage() {
                 <BriefcaseBusiness size={21} />
               </span>
               <span className="company-summary-label">Total Jobs</span>
-              <strong>{counts.total}</strong>
+              <strong>{isLoading || isFetching ? <Skeleton variant="number" width={56} /> : counts.total}</strong>
             </button>
 
             <button
@@ -600,7 +616,7 @@ export default function JobsPage() {
                 <Clock size={21} />
               </span>
               <span className="company-summary-label">Draft</span>
-              <strong>{counts.draft}</strong>
+              <strong>{isLoading || isFetching ? <Skeleton variant="number" width={56} /> : counts.draft}</strong>
             </button>
 
             <button
@@ -613,7 +629,7 @@ export default function JobsPage() {
                 <CheckCircle size={21} />
               </span>
               <span className="company-summary-label">Published</span>
-              <strong>{counts.published}</strong>
+              <strong>{isLoading || isFetching ? <Skeleton variant="number" width={56} /> : counts.published}</strong>
             </button>
 
             <button
@@ -626,7 +642,7 @@ export default function JobsPage() {
                 <XCircle size={21} />
               </span>
               <span className="company-summary-label">Closed</span>
-              <strong>{counts.closed}</strong>
+              <strong>{isLoading || isFetching ? <Skeleton variant="number" width={56} /> : counts.closed}</strong>
             </button>
           </div>
 
@@ -669,8 +685,8 @@ export default function JobsPage() {
 
           {/* Jobs table */}
           <div className="company-table-card">
-            {isLoading ? (
-              <div className="admin-loading">Loading jobs...</div>
+            {isLoading || isFetching ? (
+              <TableSkeleton rows={6} columns={7} />
             ) : filteredJobs.length === 0 ? (
               <div className="company-empty">
                 <BriefcaseBusiness size={35} />
@@ -711,7 +727,6 @@ export default function JobsPage() {
                         <td>
                           <div className="company-contact-cell">
                             <strong>{companyLabel(job)}</strong>
-                            <span>Company ID: {job.companyId}</span>
                           </div>
                         </td>
 
@@ -844,12 +859,18 @@ export default function JobsPage() {
 
                 <div className="full">
                   <span>Description</span>
-                  <p>{selectedJob.description}</p>
+                  <RichTextContent
+                    html={selectedJob.description}
+                    className="admin-job-rich-text"
+                  />
                 </div>
 
                 <div className="full">
                   <span>Requirements</span>
-                  <p>{selectedJob.requirements}</p>
+                  <RichTextContent
+                    html={selectedJob.requirements}
+                    className="admin-job-rich-text"
+                  />
                 </div>
 
                 <div>
@@ -969,35 +990,27 @@ export default function JobsPage() {
                   />
                 </label>
 
-                <label className="full">
-                  Description
-                  <textarea
-                    required
-                    rows={5}
+                <div className="full rich-text-form-field">
+                  <span>Description</span>
+                  <RichTextEditor
+                    label="Job description"
                     value={form.description}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        description: event.target.value,
-                      })
+                    onChange={(value) =>
+                      setForm({ ...form, description: value })
                     }
                   />
-                </label>
+                </div>
 
-                <label className="full">
-                  Requirements
-                  <textarea
-                    required
-                    rows={5}
+                <div className="full rich-text-form-field">
+                  <span>Requirements</span>
+                  <RichTextEditor
+                    label="Job requirements"
                     value={form.requirements}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        requirements: event.target.value,
-                      })
+                    onChange={(value) =>
+                      setForm({ ...form, requirements: value })
                     }
                   />
-                </label>
+                </div>
 
                 <div className="company-modal-actions full">
                   <button

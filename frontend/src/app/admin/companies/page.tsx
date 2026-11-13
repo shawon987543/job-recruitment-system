@@ -1,4 +1,5 @@
 "use client";
+import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -16,6 +17,7 @@ import {
   Eye,
   Pencil,
   CheckCircle,
+  Clock3,
   XCircle,
   Power,
   X,
@@ -164,8 +166,8 @@ export default function CompaniesPage() {
   const queryClient = useQueryClient();
 
   // UI state
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -345,6 +347,7 @@ export default function CompaniesPage() {
   const {
     data: allCompanies = [],
     isLoading,
+    isFetching,
     isError: isCompaniesError,
     error: companiesError,
   } = useQuery<Company[]>({
@@ -389,6 +392,7 @@ export default function CompaniesPage() {
 
   // Approve, activate, or deactivate company.
   const companyActionMutation = useMutation({
+    onMutate: () => startToastLoading("Updating company..."),
     mutationFn: async ({
       company,
       action,
@@ -440,6 +444,7 @@ export default function CompaniesPage() {
   // Edit company, reject registration, create admin,
   // or manually create a company.
   const modalMutation = useMutation({
+    onMutate: () => startToastLoading("Saving company..."),
     mutationFn: async (variables: ModalVariables) => {
       const {
         company,
@@ -736,7 +741,9 @@ export default function CompaniesPage() {
               }`}
               onClick={() => setFilter("PENDING")}
             >
-              <span className="company-summary-icon orange"></span>
+              <span className="company-summary-icon orange">
+                <Clock3 size={21} />
+              </span>
 
               <span className="company-summary-label">Pending</span>
 
@@ -845,7 +852,7 @@ export default function CompaniesPage() {
 
           {/* Company table */}
           <div className="company-table-card">
-            {isLoading ? (
+            {isLoading || isFetching ? (
               <CompaniesPageSkeleton />
             ) : filteredCompanies.length === 0 ? (
               <div className="company-empty">

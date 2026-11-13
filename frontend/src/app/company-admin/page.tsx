@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
 import { useEffect, useState } from "react";
 import {
   BriefcaseBusiness,
@@ -62,33 +63,32 @@ function getStatusClass(status: string) {
   return statusClasses[status] || "ca-status-pending";
 }
 
+function DashboardWelcome() {
+  return (
+    <section className="ca-welcome">
+      <div className="ca-welcome-content">
+        <span className="ca-welcome-label">COMPANY WORKSPACE</span>
+        <h2>Welcome back!</h2>
+        <p>
+          Here is an overview of your recruitment activities. Track job
+          postings, review applications, and keep your hiring process moving.
+        </p>
+      </div>
+      <div className="ca-welcome-illustration">
+        <div className="ca-illustration-circle">
+          <TrendingUp size={42} />
+        </div>
+        <span>Recruitment overview</span>
+      </div>
+    </section>
+  );
+}
+
 // Dashboard skeleton loading component
 function DashboardSkeleton() {
   return (
     <div className="ca-content ca-skeleton-content">
-      {/* Welcome skeleton */}
-      <section className="ca-welcome">
-        <div className="ca-welcome-content">
-          <Skeleton width="150px" height={12} />
-
-          <div style={{ marginTop: 16 }}>
-            <Skeleton width="260px" height={30} />
-          </div>
-
-          <div style={{ marginTop: 18 }}>
-            <Skeleton width="90%" height={12} />
-          </div>
-
-          <div style={{ marginTop: 10 }}>
-            <Skeleton width="75%" height={12} />
-          </div>
-        </div>
-
-        <div className="ca-welcome-illustration">
-          <Skeleton variant="circle" width={75} height={75} />
-          <Skeleton width="130px" height={12} />
-        </div>
-      </section>
+      <DashboardWelcome />
 
       {/* Section heading skeleton */}
       <section className="ca-section-heading">
@@ -285,8 +285,7 @@ function DashboardSkeleton() {
 export default function CompanyAdminDashboard() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [adminName, setAdminName] = useState("Company Admin");
+  const [error, setError] = useToastErrorState();
 
   async function loadDashboard() {
     try {
@@ -306,21 +305,7 @@ export default function CompanyAdminDashboard() {
   }
 
   useEffect(() => {
-    try {
-      const storedUser = sessionStorage.getItem("user");
-
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-
-        if (user?.name) {
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          setAdminName(user.name);
-        }
-      }
-    } catch {
-      // Ignore invalid stored user data.
-    }
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDashboard();
   }, []);
 
@@ -424,30 +409,7 @@ export default function CompanyAdminDashboard() {
   return (
     <div className="ca-content">
 
-      {/* Welcome section */}
-      <section className="ca-welcome">
-        <div className="ca-welcome-content">
-          <span className="ca-welcome-label">
-            COMPANY WORKSPACE
-          </span>
-
-          <h2>Welcome back, {adminName}!</h2>
-
-          <p>
-            Here is an overview of your recruitment activities. Track job
-            postings, review applications, and keep your hiring process
-            moving.
-          </p>
-        </div>
-
-        <div className="ca-welcome-illustration">
-          <div className="ca-illustration-circle">
-            <TrendingUp size={42} />
-          </div>
-
-          <span>Recruitment overview</span>
-        </div>
-      </section>
+      <DashboardWelcome />
 
       {/* Recruitment overview */}
       <section className="ca-section-heading">

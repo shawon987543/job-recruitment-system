@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -21,6 +22,7 @@ import {
 } from "lucide-react";
 
 import AdminSidebar from "../../../components/admin/AdminSidebar";
+import Skeleton from "@/components/ui/skeleton";
 import { apiRequest } from "../../../lib/api";
 import {
   useAdminTheme,
@@ -67,8 +69,8 @@ export default function AdminSettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordError, setPasswordError] = useState("");
-  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordError, setPasswordError] = useToastErrorState();
+  const [passwordSuccess, setPasswordSuccess] = useToastSuccessState();
 
   // Load admin profile
   useEffect(() => {
@@ -269,12 +271,45 @@ export default function AdminSettingsPage() {
 
   if (pageLoading) {
     return (
-      <div className="admin-settings-loading">
-        <Loader2
-          size={30}
-          className="admin-settings-spinner"
-        />
-        <p>Loading settings...</p>
+      <div className="admin-layout admin-settings-page">
+        <AdminSidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
+        <main className="admin-main">
+          <header className="admin-topbar admin-settings-topbar">
+            <div>
+              <Skeleton variant="text" width={180} height={26} />
+              <Skeleton variant="text" width={310} height={14} />
+            </div>
+          </header>
+          <div className="admin-content admin-settings-content">
+            <div className="admin-settings-heading">
+              <div style={{ flex: 1 }}>
+                <Skeleton variant="text" width={170} height={12} />
+                <Skeleton variant="text" width={240} height={28} />
+                <Skeleton variant="text" width="70%" height={14} />
+              </div>
+              <Skeleton variant="rectangle" width={58} height={58} />
+            </div>
+            <div className="admin-settings-grid">
+              <div className="admin-settings-tabs">
+                {[0, 1, 2].map((item) => (
+                  <div key={item} style={{ padding: 16 }}>
+                    <Skeleton variant="text" width="78%" height={16} />
+                    <Skeleton variant="text" width="58%" height={12} />
+                  </div>
+                ))}
+              </div>
+              <div className="admin-settings-panel">
+                <Skeleton variant="text" width="35%" height={22} />
+                <Skeleton variant="text" width="55%" height={14} />
+                <div style={{ display: "grid", gap: 16, marginTop: 28 }}>
+                  {[0, 1, 2, 3].map((item) => (
+                    <Skeleton key={item} variant="rectangle" height={58} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }

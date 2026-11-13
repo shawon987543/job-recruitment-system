@@ -113,4 +113,14 @@ updateStatusForSuperAdmin(
   ) {
     return this.applicationsService.withdraw(id, user.userId);
   }
+
+  // Candidate reapplies to their own withdrawn application.
+  @Post(':id/reapply')
+  @Roles(Role.CANDIDATE)
+  reapply(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.applicationsService.reapply(id, user.userId);
+  }
 }

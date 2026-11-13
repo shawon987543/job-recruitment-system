@@ -1,8 +1,10 @@
 
 "use client";
+import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 
 import { StatsSkeleton } from "@/components/ui/stats-skeleton";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
+import Skeleton from "@/components/ui/skeleton";
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
 import {
@@ -86,8 +88,8 @@ export default function UsersPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] =
     useState<RoleFilter>("ALL");
@@ -297,6 +299,7 @@ export default function UsersPage() {
   const {
     data: userDetails,
     isLoading: isDetailsLoading,
+    isFetching: isDetailsFetching,
   } = useQuery<User>({
     queryKey: ["user", selectedUser?.id],
 
@@ -347,6 +350,7 @@ export default function UsersPage() {
 
   // Activate or deactivate a user
   const statusMutation = useMutation({
+    onMutate: () => startToastLoading("Updating user status..."),
     mutationFn: async ({
       user,
       isActive,
@@ -388,6 +392,7 @@ export default function UsersPage() {
 
   // Edit user's name and email
   const updateMutation = useMutation({
+    onMutate: () => startToastLoading("Saving user..."),
     mutationFn: async ({
       user,
       form: userForm,
@@ -432,6 +437,7 @@ export default function UsersPage() {
 
   // Approve a Company Admin registration request
   const approveMutation = useMutation({
+    onMutate: () => startToastLoading("Approving user..."),
     mutationFn: async (request: CompanyAdminRequest) => {
       const response = await apiRequest(
         `/companies/${request.id}/approve`,
@@ -476,6 +482,7 @@ export default function UsersPage() {
 
   // Reject a Company Admin registration request
   const rejectMutation = useMutation({
+    onMutate: () => startToastLoading("Rejecting request..."),
     mutationFn: async ({
       request,
       reason,
@@ -1180,8 +1187,12 @@ export default function UsersPage() {
             {/* View user details */}
             {modal === "view" && (
               <div className="company-details">
-                {isDetailsLoading ? (
-                  <p>Loading user details...</p>
+                {isDetailsLoading || isDetailsFetching ? (
+                  <div style={{ display: "grid", gap: 14 }} aria-busy="true">
+                    {[0, 1, 2, 3].map((item) => (
+                      <Skeleton key={item} variant="text" height={18} />
+                    ))}
+                  </div>
                 ) : (
                   <>
                     <div>

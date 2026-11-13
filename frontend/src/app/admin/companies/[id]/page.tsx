@@ -563,7 +563,7 @@ export default function CompanyDetailsPage() {
           </button>
           
             {/* Skeleton */}
-          {isLoading && <CompanyDetailsSkeleton/>}
+          {(isLoading || isFetching) && <CompanyDetailsSkeleton />}
 
           {isError && (
             <div
@@ -615,7 +615,7 @@ export default function CompanyDetailsPage() {
             </div>
           )}
 
-          {company && (
+          {company && !isFetching && (
             <>
               {/* Company header */}
               <div

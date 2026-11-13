@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
 import { useEffect, useMemo, useState } from "react";
 import {
   Search,
@@ -78,7 +79,7 @@ function getStatusClass(status: ApplicationStatus) {
 export default function CandidatesPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [selectedCandidate, setSelectedCandidate] =

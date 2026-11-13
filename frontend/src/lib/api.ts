@@ -1,4 +1,5 @@
 import { redirect } from "next/dist/client/components/redirect";
+import toast from "react-hot-toast";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -93,34 +94,42 @@ export async function apiRequest(
   endpoint: string,
   options: RequestInit = {},
 ) {
-  let token = await getValidAccessToken();
+  const method = (options.method || "GET").toUpperCase();
+  const toastId =
+    method === "GET" ? undefined : toast.loading("Saving your changes...");
 
-  const makeRequest = (accessToken: string) =>
-    fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+  try {
+    let token = await getValidAccessToken();
 
-  let response = await makeRequest(token);
+    const makeRequest = (accessToken: string) =>
+      fetch(`${API_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {}),
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-  if (response.status === 401) {
-    token = await handleUnauthorized();
-    response = await makeRequest(token);
+    let response = await makeRequest(token);
+
+    if (response.status === 401) {
+      token = await handleUnauthorized();
+      response = await makeRequest(token);
+    }
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response));
+    }
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    return response.json();
+  } finally {
+    if (toastId) toast.dismiss(toastId);
   }
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
 }
 
 /**
@@ -131,31 +140,37 @@ export async function apiUpload(
   endpoint: string,
   formData: FormData,
 ) {
-  let token = await getValidAccessToken();
+  const toastId = toast.loading("Uploading...");
 
-  const makeRequest = (accessToken: string) =>
-    fetch(`${API_URL}${endpoint}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: formData,
-    });
+  try {
+    let token = await getValidAccessToken();
 
-  let response = await makeRequest(token);
+    const makeRequest = (accessToken: string) =>
+      fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      });
 
-  if (response.status === 401) {
-    token = await handleUnauthorized();
-    response = await makeRequest(token);
+    let response = await makeRequest(token);
+
+    if (response.status === 401) {
+      token = await handleUnauthorized();
+      response = await makeRequest(token);
+    }
+
+    if (!response.ok) {
+      throw new Error(await getErrorMessage(response));
+    }
+
+    if (response.status === 204) {
+      return null;
+    }
+
+    return response.json();
+  } finally {
+    toast.dismiss(toastId);
   }
-
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response));
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -13,6 +14,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
+import Skeleton from "@/components/ui/skeleton";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -393,6 +395,53 @@ function MonthlyChart({
   );
 }
 
+function ReportsLoadingSkeleton() {
+  const cardStyle = {
+    padding: 22,
+    border: "1px solid #e8edf4",
+    borderRadius: 16,
+    background: "#ffffff",
+  } as const;
+
+  return (
+    <div aria-label="Loading reports" aria-busy="true">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+          gap: 18,
+          marginBottom: 24,
+        }}
+      >
+        {[0, 1, 2, 3].map((item) => (
+          <div key={item} style={cardStyle}>
+            <Skeleton variant="text" width="60%" height={15} />
+            <Skeleton variant="number" width="45%" height={32} />
+            <Skeleton variant="text" width="70%" height={13} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gap: 20, marginBottom: 28 }}>
+        {[0, 1, 2].map((item) => (
+          <div key={item} style={cardStyle}>
+            <Skeleton variant="text" width="34%" height={20} />
+            <Skeleton variant="text" width="55%" height={13} />
+            <Skeleton variant="rectangle" height={210} />
+          </div>
+        ))}
+      </div>
+      <div style={cardStyle}>
+        <Skeleton variant="text" width="30%" height={20} />
+        <div style={{ display: "grid", gap: 18, marginTop: 20 }}>
+          {[0, 1, 2, 3].map((item) => (
+            <Skeleton key={item} variant="text" height={18} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // MAIN REPORT PAGE
 
 export default function ReportsPage() {
@@ -400,8 +449,8 @@ export default function ReportsPage() {
   const queryClient = useQueryClient();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [reportPeriod, setReportPeriod] = useState("last7days");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -557,6 +606,7 @@ export default function ReportsPage() {
   const {
     data: monthlyAnalytics,
     isLoading: monthlyLoading,
+    isFetching: monthlyFetching,
     isError: monthlyIsError,
     error: monthlyError,
     refetch: refetchMonthly,
@@ -592,6 +642,7 @@ export default function ReportsPage() {
   const {
     data: companyPerformance,
     isLoading: companyPerformanceLoading,
+    isFetching: companyPerformanceFetching,
     isError: companyPerformanceIsError,
     error: companyPerformanceError,
     refetch: refetchCompanyPerformance,
@@ -1207,9 +1258,10 @@ export default function ReportsPage() {
             )}
 
             {filteredReportsLoading ? (
-              <p style={{ margin: 0, color: "#64748b" }}>
-                Loading filtered reports...
-              </p>
+              <div style={{ display: "grid", gap: 12 }} aria-busy="true">
+                <Skeleton variant="text" width="60%" height={14} />
+                <Skeleton variant="text" width="45%" height={14} />
+              </div>
             ) : filteredReportsIsError ? (
               <div className="company-alert error">
                 {filteredReportsError instanceof Error
@@ -1292,10 +1344,8 @@ export default function ReportsPage() {
             ) : null}
           </section>
 
-          {isLoading ? (
-            <div className="admin-loading">
-              Loading platform reports...
-            </div>
+          {isLoading || isFetching ? (
+            <ReportsLoadingSkeleton />
           ) : (
             <>
               {/* SUMMARY CARDS */}
@@ -1473,9 +1523,15 @@ export default function ReportsPage() {
                   </span>
                 </div>
 
-                {monthlyLoading ? (
-                  <div style={cardStyle}>
-                    Loading monthly analytics...
+                {monthlyLoading || monthlyFetching ? (
+                  <div style={{ display: "grid", gap: 20 }} aria-busy="true">
+                    {[0, 1, 2].map((item) => (
+                      <div key={item} style={cardStyle}>
+                        <Skeleton variant="text" width="38%" height={20} />
+                        <Skeleton variant="text" width="60%" height={13} />
+                        <Skeleton variant="rectangle" height={210} />
+                      </div>
+                    ))}
                   </div>
                 ) : monthlyIsError ? (
                   <div className="company-alert error">
@@ -1540,9 +1596,13 @@ export default function ReportsPage() {
                   </p>
                 </div>
 
-                {companyPerformanceLoading ? (
-                  <div style={cardStyle}>
-                    Loading company performance...
+                {companyPerformanceLoading || companyPerformanceFetching ? (
+                  <div style={cardStyle} aria-busy="true">
+                    <div style={{ display: "grid", gap: 18 }}>
+                      {[0, 1, 2, 3, 4].map((item) => (
+                        <Skeleton key={item} variant="text" height={18} />
+                      ))}
+                    </div>
                   </div>
                 ) : companyPerformanceIsError ? (
                   <div className="company-alert error">

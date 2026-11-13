@@ -1,4 +1,6 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -21,7 +23,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [loading, setLoading] = useState(false);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -30,23 +32,34 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const data = await toast.promise(
+        (async () => {
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email, password }),
+          });
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              Array.isArray(result.message)
+                ? result.message.join(", ")
+                : result.message || "Login failed",
+            );
+          }
+
+          return result;
+        })(),
+        {
+          loading: "Signing in...",
+          success: "Signed in successfully.",
+          error: (err) =>
+            err instanceof Error ? err.message : "Unable to log in.",
         },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          Array.isArray(data.message)
-            ? data.message.join(", ")
-            : data.message || "Login failed",
-        );
-      }
+      );
 
       sessionStorage.setItem("access_token", data.access_token);
       sessionStorage.setItem("refresh_token", data.refresh_token);
@@ -72,10 +85,11 @@ export default function LoginPage() {
 
         default:
           sessionStorage.clear();
+          toast.error("Your account role is not recognized.");
           throw new Error("Your account role is not recognized.");
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to log in");
+    } catch {
+      // toast.promise reports login request errors.
     } finally {
         setTimeout(()=>{
           setLoading(false);

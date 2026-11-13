@@ -1,5 +1,7 @@
 
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -21,8 +23,8 @@ export default function ChangePasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +54,7 @@ export default function ChangePasswordPage() {
     }
 
     setLoading(true);
+    const loadingToast = toast.loading("Updating your password...");
 
     try {
       const response = await fetch(`${API_URL}/auth/Change-password`, {
@@ -90,6 +93,7 @@ export default function ChangePasswordPage() {
         err instanceof Error ? err.message : "Something went wrong.",
       );
     } finally {
+      toast.dismiss(loadingToast);
       setLoading(false);
     }
   }

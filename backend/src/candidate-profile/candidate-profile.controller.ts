@@ -31,7 +31,8 @@ import {
 
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { mkdirSync } from 'fs';
+import { join, extname } from 'path';
 
 @Controller('candidate-profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -110,6 +111,69 @@ uploadResume(
   return this.candidateProfileService.updateResume(
     user.userId,
     resumeUrl,
+  );
+}
+
+@Post('profile-picture')
+@UseInterceptors(
+  FileInterceptor('profilePicture', {
+    storage: diskStorage({
+      destination: (req, file, callback) => {
+        const uploadDirectory = join(
+          process.cwd(),
+          'uploads',
+          'profile-pictures',
+        );
+        mkdirSync(uploadDirectory, { recursive: true });
+        callback(null, uploadDirectory);
+      },
+      filename: (req, file, callback) => {
+        const uniqueName =
+          `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+        callback(
+          null,
+          `${uniqueName}${extname(file.originalname).toLowerCase()}`,
+        );
+      },
+    }),
+    limits: {
+      fileSize: 5 * 1024 * 1024,
+    },
+    fileFilter: (req, file, callback) => {
+      const allowedMimeTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/gif',
+      ];
+
+      if (!allowedMimeTypes.includes(file.mimetype)) {
+        return callback(
+          new BadRequestException(
+            'Profile pictures must be JPEG, PNG, WebP, or GIF images',
+          ),
+          false,
+        );
+      }
+
+      callback(null, true);
+    },
+  }),
+)
+uploadProfilePicture(
+  @CurrentUser() user: AuthenticatedUser,
+  @UploadedFile() file: Express.Multer.File,
+) {
+  if (!file) {
+    throw new BadRequestException('A profile picture is required');
+  }
+
+  const profilePictureUrl = `/uploads/profile-pictures/${file.filename}`;
+
+  return this.candidateProfileService.updateProfilePicture(
+    user.userId,
+    profilePictureUrl,
   );
 }
 

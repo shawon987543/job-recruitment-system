@@ -44,6 +44,9 @@ export class CandidateProfile {
   @Column({ type: 'varchar', length: 500, nullable: true })
   resumeUrl: string | null;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  profilePictureUrl: string | null;
+
   @OneToMany(() => Education, (education) => education.candidateProfile)
   educations: Education[];
 

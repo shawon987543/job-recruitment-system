@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   BriefcaseBusiness,
@@ -104,6 +105,7 @@ export default function CompanyAdminLayout({
               : "Company Workspace";
 
   function logout() {
+    toast.success("Signed out.");
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");

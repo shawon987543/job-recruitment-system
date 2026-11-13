@@ -329,6 +329,28 @@
   margin: 0 0 14px;
 }
 
+.browse-job-description {
+  max-height: 4.8em;
+  overflow: hidden;
+  margin: -5px 0 14px;
+  color: #758096;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.browse-job-description h2,
+.browse-job-description h3 {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  font-weight: 700;
+}
+
+.browse-job-description p {
+  display: inline;
+  margin: 0;
+}
+
 .browse-job-meta {
   display: flex;
   flex-wrap: wrap;

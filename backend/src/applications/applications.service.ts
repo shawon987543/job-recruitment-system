@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { Company } from '../companies/entities/company.entity';
 import { Application, ApplicationStatus } from './entities/application.entity';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -233,6 +233,7 @@ async findAllForSuperAdmin() {
 
         return {
           ...application,
+          reapplyDisabledReason: this.getReapplyDisabledReason(job),
           job: job
             ? {
                 id: job.id,
@@ -246,6 +247,25 @@ async findAllForSuperAdmin() {
         };
       }),
     );
+  }
+
+  private getReapplyDisabledReason(job: Job | null) {
+    if (!job) {
+      return 'This job is no longer available.';
+    }
+
+    if (job.status !== JobStatus.PUBLISHED) {
+      return job.status === JobStatus.CLOSED
+        ? 'This job is closed and cannot accept reapplications.'
+        : 'This job is not currently accepting applications.';
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (job.deadline && job.deadline < today) {
+      return 'The application deadline has passed.';
+    }
+
+    return null;
   }
 
   // Company Admin sees applications for jobs belonging to their company.
@@ -363,5 +383,83 @@ async findAllForSuperAdmin() {
     application.withdrawnAt = new Date();
 
     return this.applicationsRepository.save(application);
+  }
+
+  // Reactivate the existing row so prior application data remains attached.
+  async reapply(applicationId: number, candidateId: number) {
+    const application = await this.applicationsRepository.findOne({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
+
+    if (application.candidateId !== candidateId) {
+      throw new ForbiddenException(
+        'You cannot reapply using another candidate’s application.',
+      );
+    }
+
+    if (application.status !== ApplicationStatus.WITHDRAWN) {
+      throw new ConflictException(
+        'This application is already active or cannot be reapplied to.',
+      );
+    }
+
+    const candidate = await this.usersRepository.findOne({
+      where: { id: candidateId },
+    });
+    if (!candidate || !candidate.isActive) {
+      throw new ForbiddenException('Your account is inactive or unavailable.');
+    }
+
+    const job = await this.jobsRepository.findOne({
+      where: { id: application.jobId },
+    });
+
+    if (!job) {
+      throw new NotFoundException('This job is no longer available.');
+    }
+
+    const disabledReason = this.getReapplyDisabledReason(job);
+    if (disabledReason) {
+      throw new BadRequestException(disabledReason);
+    }
+
+    const existingActiveApplication =
+      await this.applicationsRepository.findOne({
+        where: {
+          jobId: application.jobId,
+          candidateId,
+          status: Not(ApplicationStatus.WITHDRAWN),
+        },
+      });
+
+    if (existingActiveApplication) {
+      throw new ConflictException(
+        'You already have an active application for this job.',
+      );
+    }
+
+    // Update conditionally so concurrent reapply requests cannot both succeed.
+    const updateResult = await this.applicationsRepository.update(
+      {
+        id: applicationId,
+        candidateId,
+        status: ApplicationStatus.WITHDRAWN,
+      },
+      { status: ApplicationStatus.PENDING },
+    );
+
+    if (updateResult.affected !== 1) {
+      throw new ConflictException(
+        'This application is already active or has changed. Refresh and try again.',
+      );
+    }
+
+    return this.applicationsRepository.findOneOrFail({
+      where: { id: applicationId, candidateId },
+    });
   }
 }

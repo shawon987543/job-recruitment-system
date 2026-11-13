@@ -8,7 +8,7 @@
   min-height: 100vh;
   background: #f6f8fc;
   color: var(--candidate-text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
 }
 
 /* Sidebar */
@@ -201,7 +201,6 @@
 }
 
 .candidate-icon-button,
-.candidate-settings-button,
 .candidate-menu-button {
   display: grid;
   place-items: center;
@@ -214,8 +213,7 @@
   cursor: pointer;
 }
 
-.candidate-icon-button:hover,
-.candidate-settings-button:hover {
+.candidate-icon-button:hover {
   border-color: #bdcafa;
   color: var(--candidate-primary);
 }
@@ -231,11 +229,19 @@
   place-items: center;
   width: 39px;
   height: 39px;
+  overflow: hidden;
   border-radius: 50%;
   background: #e9efff;
   color: #315bd6;
   font-size: 16px;
   font-weight: 750;
+}
+
+.candidate-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .candidate-user-text {
@@ -625,10 +631,18 @@
   place-items: center;
   width: 45px;
   height: 45px;
+  overflow: hidden;
   margin-bottom: 15px;
   border-radius: 13px;
   background: #edf2ff;
   color: #4169e1;
+}
+
+.candidate-profile-panel-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .candidate-profile-label {
@@ -808,10 +822,6 @@
   }
 
   .candidate-user-text {
-    display: none;
-  }
-
-  .candidate-settings-button {
     display: none;
   }
 

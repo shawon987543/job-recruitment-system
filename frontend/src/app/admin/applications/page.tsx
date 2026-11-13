@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useMemo, useState } from "react";
+import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import type { FormEvent } from "react";
 import Skeleton from "@/components/ui/skeleton";
 import {
@@ -188,39 +189,6 @@ function PageSkeleton() {
 }
 
 // =====================================================
-// WELCOME SECTION SKELETON
-// =====================================================
-
-function WelcomeSkeleton() {
-  return (
-    <div className="company-welcome">
-      <div style={{ flex: 1 }}>
-        <Skeleton variant="text" width={190} height={14} />
-
-        <div style={{ marginTop: 16 }}>
-          <Skeleton variant="text" width="65%" height={30} />
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <Skeleton variant="text" width="90%" height={16} />
-          <Skeleton
-            variant="text"
-            width="65%"
-            height={16}
-          />
-        </div>
-      </div>
-
-      <Skeleton
-        variant="rectangle"
-        width={65}
-        height={65}
-      />
-    </div>
-  );
-}
-
-// =====================================================
 // SUMMARY CARDS SKELETON
 // =====================================================
 
@@ -306,8 +274,8 @@ export default function ApplicationsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -446,6 +414,7 @@ export default function ApplicationsPage() {
   const {
     data: applications = [],
     isLoading,
+    isFetching,
     isError,
     error: queryError,
   } = useQuery<Application[]>({
@@ -526,6 +495,7 @@ export default function ApplicationsPage() {
 
   // Update application mutation
   const updateMutation = useMutation({
+    onMutate: () => startToastLoading("Updating application..."),
     mutationFn: async ({
       applicationId,
       form,
@@ -739,30 +709,10 @@ export default function ApplicationsPage() {
           </button>
 
           <div>
-            {isLoading ? (
-              <>
-                <Skeleton
-                  variant="text"
-                  width={220}
-                  height={25}
-                />
-
-                <div style={{ marginTop: 8 }}>
-                  <Skeleton
-                    variant="text"
-                    width={290}
-                    height={15}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                <h1>Application Management</h1>
-                <p>
-                  Review and manage applications across all companies.
-                </p>
-              </>
-            )}
+            <h1>Application Management</h1>
+            <p>
+              Review and manage applications across all companies.
+            </p>
           </div>
         </header>
 
@@ -791,31 +741,27 @@ export default function ApplicationsPage() {
           )}
 
           {/* WELCOME SECTION */}
-          {isLoading ? (
-            <WelcomeSkeleton />
-          ) : (
-            <div className="company-welcome">
-              <div>
-                <span>
-                  SUPER ADMIN / APPLICATIONS
-                </span>
+          <div className="company-welcome">
+            <div>
+              <span>
+                SUPER ADMIN / APPLICATIONS
+              </span>
 
-                <h2>Manage all applications</h2>
+              <h2>Manage all applications</h2>
 
-                <p>
-                  Monitor candidate applications, review details,
-                  and update recruitment progress across companies.
-                </p>
-              </div>
-
-              <div className="company-welcome-icon">
-                <FileText size={55} />
-              </div>
+              <p>
+                Monitor candidate applications, review details,
+                and update recruitment progress across companies.
+              </p>
             </div>
-          )}
+
+            <div className="company-welcome-icon">
+              <FileText size={55} />
+            </div>
+          </div>
 
           {/* SUMMARY CARDS */}
-          {isLoading ? (
+          {isLoading || isFetching ? (
             <SummarySkeleton />
           ) : (
             <div className="company-summary-grid">
@@ -926,7 +872,7 @@ export default function ApplicationsPage() {
           )}
 
           {/* TOOLBAR */}
-          {isLoading ? (
+          {isLoading || isFetching ? (
             <ToolbarSkeleton />
           ) : (
             <div className="company-toolbar">
@@ -953,7 +899,7 @@ export default function ApplicationsPage() {
           )}
 
           {/* FILTER BUTTONS */}
-          {isLoading ? (
+          {isLoading || isFetching ? (
             <FilterSkeleton />
           ) : (
             <div className="company-filter-row">
@@ -982,7 +928,7 @@ export default function ApplicationsPage() {
           {/* APPLICATION TABLE */}
           <div className="company-table-card">
 
-            {isLoading ? (
+            {isLoading || isFetching ? (
               <PageSkeleton />
             ) : filteredApplications.length === 0 ? (
               <div className="company-empty">

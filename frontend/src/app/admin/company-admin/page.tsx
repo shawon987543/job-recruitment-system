@@ -1,4 +1,5 @@
 'use client';
+import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import {
   useCallback,
   useEffect,
@@ -7,6 +8,7 @@ import {
   type FormEvent,
 } from 'react';
 import { apiRequest } from "@/lib/api";
+import Skeleton from "@/components/ui/skeleton";
 
 type CompanyAdmin = {
   id: number;
@@ -16,6 +18,7 @@ type CompanyAdmin = {
   isActive: boolean;
   mustChangePassword: boolean;
   companyId: number | null;
+  companyName?: string | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -27,11 +30,15 @@ type AdminForm = {
 
 type StatusFilter = 'ALL' | 'ACTIVE' | 'INACTIVE';
 
-export default function CompanyAdminsContent() {
+export default function CompanyAdminsContent({
+  enabled = true,
+}: {
+  enabled?: boolean;
+}) {
   const [admins, setAdmins] = useState<CompanyAdmin[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
 
@@ -73,9 +80,11 @@ export default function CompanyAdminsContent() {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchAdmins();
-  }, [fetchAdmins]);
+  }, [enabled, fetchAdmins]);
 
   const filteredAdmins = useMemo(() => {
     const searchValue = search.trim().toLowerCase();
@@ -84,6 +93,7 @@ export default function CompanyAdminsContent() {
       const matchesSearch =
         admin.name.toLowerCase().includes(searchValue) ||
         admin.email.toLowerCase().includes(searchValue) ||
+        (admin.companyName?.toLowerCase().includes(searchValue) ?? false) ||
         String(admin.companyId ?? '').includes(searchValue);
 
       const matchesStatus =
@@ -133,6 +143,7 @@ export default function CompanyAdminsContent() {
 
     try {
       setSaving(true);
+      startToastLoading("Saving company administrator...");
       setError('');
       setSuccess('');
 
@@ -167,6 +178,7 @@ export default function CompanyAdminsContent() {
 
     try {
       setUpdatingStatusId(admin.id);
+      startToastLoading("Updating administrator status...");
       setError('');
       setSuccess('');
 
@@ -353,7 +365,11 @@ export default function CompanyAdminsContent() {
               </div>
 
               <div className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                {filteredAdmins.length} of {admins.length} accounts
+                {loading ? (
+                  <Skeleton variant="text" width={118} height={14} />
+                ) : (
+                  `${filteredAdmins.length} of ${admins.length} accounts`
+                )}
               </div>
             </div>
 
@@ -389,11 +405,45 @@ export default function CompanyAdminsContent() {
 
           {/* Loading */}
           {loading ? (
-            <div className="flex flex-col items-center justify-center px-6 py-20">
-              <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
-              <p className="mt-4 text-sm font-medium text-slate-500">
-                Loading administrator accounts...
-              </p>
+            <div className="overflow-x-auto" aria-label="Loading administrator accounts" aria-busy="true">
+              <table className="w-full min-w-237.5 text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-50/80 text-[11px] uppercase tracking-wider text-slate-500">
+                    <th className="px-6 py-4 font-bold">Administrator</th>
+                    <th className="px-5 py-4 font-bold">Company</th>
+                    <th className="px-5 py-4 font-bold">Account Status</th>
+                    <th className="px-5 py-4 font-bold">Password</th>
+                    <th className="px-5 py-4 font-bold">Joined Date</th>
+                    <th className="px-6 py-4 text-right font-bold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 5 }).map((_, row) => (
+                    <tr key={row}>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <Skeleton variant="circle" width={44} height={44} />
+                          <div className="grid flex-1 gap-2">
+                            <Skeleton variant="text" width="65%" height={14} />
+                            <Skeleton variant="text" width="82%" height={12} />
+                            <Skeleton variant="text" width="32%" height={10} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-5"><Skeleton variant="rectangle" width={112} height={30} /></td>
+                      <td className="px-5 py-5"><Skeleton variant="rectangle" width={88} height={26} rounded /></td>
+                      <td className="px-5 py-5"><Skeleton variant="rectangle" width={108} height={26} rounded /></td>
+                      <td className="px-5 py-5"><Skeleton variant="text" width={86} height={13} /></td>
+                      <td className="px-6 py-5">
+                        <div className="flex justify-end gap-2">
+                          <Skeleton variant="rectangle" width={54} height={32} />
+                          <Skeleton variant="rectangle" width={88} height={32} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           ) : filteredAdmins.length === 0 ? (
             <div className="px-6 py-20 text-center">
@@ -465,9 +515,10 @@ export default function CompanyAdminsContent() {
                         <div className="inline-flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
                           <span className="text-blue-600">▦</span>
                           <span className="font-semibold text-slate-700">
-                            {admin.companyId
-                              ? `Company #${admin.companyId}`
-                              : 'Not assigned'}
+                            {admin.companyName ||
+                              (admin.companyId
+                                ? `Company #${admin.companyId}`
+                                : 'Not assigned')}
                           </span>
                         </div>
                       </td>
@@ -753,9 +804,9 @@ function StatCard({
           <p className="text-sm font-semibold text-slate-500">
             {title}
           </p>
-          <p className={`mt-3 text-3xl font-extrabold tracking-tight text-slate-900 ${style.label}`}>
-            {loading ? '—' : value}
-          </p>
+          <div className={`mt-3 text-3xl font-extrabold tracking-tight text-slate-900 ${style.label}`}>
+            {loading ? <Skeleton variant="number" width={72} height={36} /> : value}
+          </div>
         </div>
 
         <div className={`flex h-12 w-12 items-center justify-center rounded-2xl text-xl font-bold ${style.icon}`}>

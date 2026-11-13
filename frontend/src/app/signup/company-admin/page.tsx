@@ -1,4 +1,7 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import { useToastSuccessState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 
@@ -27,8 +30,8 @@ const initialForm: CompanyAdminForm = {
 export default function CompanyAdminSignupPage() {
   const [form, setForm] = useState<CompanyAdminForm>(initialForm);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useToastSuccessState();
+  const [error, setError] = useToastErrorState();
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -60,6 +63,7 @@ export default function CompanyAdminSignupPage() {
     }
 
     setLoading(true);
+    const loadingToast = toast.loading("Submitting company registration...");
 
     try {
       const baseUrl =
@@ -111,6 +115,7 @@ export default function CompanyAdminSignupPage() {
           : "Something went wrong. Please try again."
       );
     } finally {
+      toast.dismiss(loadingToast);
       setLoading(false);
     }
   };

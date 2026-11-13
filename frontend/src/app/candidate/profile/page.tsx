@@ -1,12 +1,21 @@
 
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 
-import { FormEvent, useEffect, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   apiRequest,
   apiUpload,
 } from "@/lib/api";
+import Skeleton from "@/components/ui/skeleton";
 import "./profile.css";
 
 type Education = {
@@ -44,6 +53,7 @@ type CandidateProfile = {
   bio?: string | null;
   skills?: string[];
   resumeUrl?: string | null;
+  profilePictureUrl?: string | null;
   educations?: Education[];
   experiences?: Experience[];
 };
@@ -73,11 +83,11 @@ function dateValue(value?: string | null) {
   return value ? value.slice(0, 10) : "";
 }
 
-function resumeHref(resumeUrl?: string | null) {
-  if (!resumeUrl) return "#";
+function assetHref(assetUrl?: string | null) {
+  if (!assetUrl) return "#";
 
-  if (resumeUrl.startsWith("http://") || resumeUrl.startsWith("https://")) {
-    return resumeUrl;
+  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
+    return assetUrl;
   }
 
   const apiUrl =
@@ -85,16 +95,61 @@ function resumeHref(resumeUrl?: string | null) {
 
   const serverUrl = apiUrl.replace(/\/api\/?$/, "");
 
-  return `${serverUrl}${resumeUrl.startsWith("/") ? "" : "/"}${resumeUrl}`;
+  return `${serverUrl}${assetUrl.startsWith("/") ? "" : "/"}${assetUrl}`;
+}
+
+function CandidateProfileSkeleton() {
+  return (
+    <main className="profile-page" aria-label="Loading candidate profile" aria-busy="true">
+      <div className="profile-container">
+        <header className="profile-header">
+          <div style={{ display: "grid", gap: 14, flex: 1 }}>
+            <Skeleton variant="text" width={145} height={14} />
+            <Skeleton variant="text" width="45%" height={35} />
+            <Skeleton variant="text" width="70%" height={15} />
+          </div>
+          <Skeleton variant="circle" width={88} height={88} />
+        </header>
+        {[0, 1, 2, 3, 4].map((section) => (
+          <section className="profile-card" key={section}>
+            <div className="section-heading">
+              <div style={{ display: "grid", gap: 10, width: "100%" }}>
+                <Skeleton variant="text" width="30%" height={22} />
+                <Skeleton variant="text" width="55%" height={13} />
+              </div>
+            </div>
+            {section === 0 ? (
+              <div className="profile-grid" aria-hidden="true">
+                {[0, 1, 2, 3, 4].map((field) => (
+                  <div key={field} style={{ display: "grid", gap: 9 }}>
+                    <Skeleton variant="text" width="38%" height={13} />
+                    <Skeleton variant="rectangle" height={45} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 14 }} aria-hidden="true">
+                {[0, 1].map((item) => (
+                  <Skeleton key={item} variant="rectangle" height={70} />
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+      </div>
+    </main>
+  );
 }
 
 export default function CandidateProfilePage() {
+  const profilePictureInput = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [uploadingProfilePicture, setUploadingProfilePicture] = useState(false);
+  const [message, setMessage] = useToastSuccessState();
+  const [error, setError] = useToastErrorState();
 
   const [personal, setPersonal] = useState({
     phone: "",
@@ -190,6 +245,47 @@ export default function CandidateProfilePage() {
 
   function removeSkill(skillToRemove: string) {
     setSkills((previous) => previous.filter((skill) => skill !== skillToRemove));
+  }
+
+  async function uploadProfilePicture(event: ChangeEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Choose a JPEG, PNG, WebP, or GIF image.");
+      input.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Profile pictures must be 5MB or smaller.");
+      input.value = "";
+      return;
+    }
+
+    try {
+      setUploadingProfilePicture(true);
+      setError("");
+      setMessage("");
+
+      const formData = new FormData();
+      formData.append("profilePicture", file);
+
+      await apiUpload("/candidate-profile/profile-picture", formData);
+      await loadProfile();
+      setMessage("Profile picture updated successfully.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Profile picture upload failed.",
+      );
+    } finally {
+      setUploadingProfilePicture(false);
+      input.value = "";
+    }
   }
 
   async function uploadResume(event: FormEvent<HTMLFormElement>) {
@@ -386,7 +482,7 @@ export default function CandidateProfilePage() {
   }
 
   if (loading) {
-    return <main className="profile-page"><p>Loading candidate profile...</p></main>;
+    return <CandidateProfileSkeleton />;
   }
 
   return (
@@ -400,8 +496,40 @@ export default function CandidateProfilePage() {
             <h1>My Profile</h1>
             <p>Manage your personal information, education, experience and resume.</p>
           </div>
-          <div className="profile-avatar">
-            {(profile?.user?.name || "C").charAt(0).toUpperCase()}
+          <div className="profile-avatar-group">
+            <div className="profile-avatar">
+              {profile?.profilePictureUrl ? (
+                <Image
+                  src={assetHref(profile.profilePictureUrl)}
+                  alt="Your profile picture"
+                  width={80}
+                  height={80}
+                  unoptimized
+                  className="profile-avatar-image"
+                />
+              ) : (
+                (profile?.user?.name || "C").charAt(0).toUpperCase()
+              )}
+            </div>
+            <input
+              ref={profilePictureInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={uploadProfilePicture}
+              hidden
+            />
+            <button
+              type="button"
+              className="profile-picture-button"
+              onClick={() => profilePictureInput.current?.click()}
+              disabled={uploadingProfilePicture}
+            >
+              {uploadingProfilePicture
+                ? "Uploading Picture..."
+                : profile?.profilePictureUrl
+                  ? "Change Profile Picture"
+                  : "Set Profile Picture"}
+            </button>
           </div>
         </header>
 
@@ -515,7 +643,7 @@ export default function CandidateProfilePage() {
           {profile?.resumeUrl && (
             <a
               className="resume-link"
-              href={resumeHref(profile.resumeUrl)}
+              href={assetHref(profile.resumeUrl)}
               target="_blank"
               rel="noreferrer"
             >

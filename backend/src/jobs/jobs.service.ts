@@ -76,11 +76,33 @@ export class JobsService {
   // ==========================================
 
   async findAllForSuperAdmin() {
-    return this.jobsRepository.find({
+    const jobs = await this.jobsRepository.find({
       order: {
         createdAt: 'DESC',
       },
     });
+
+    if (jobs.length === 0) {
+      return [];
+    }
+
+    const companies = await this.companiesRepository.find({
+      where: {
+        id: In([...new Set(jobs.map((job) => job.companyId))]),
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+    const companyNames = new Map(
+      companies.map((company) => [company.id, company.name]),
+    );
+
+    return jobs.map((job) => ({
+      ...job,
+      companyName: companyNames.get(job.companyId) ?? 'Company',
+    }));
   }
 
   // ==========================================

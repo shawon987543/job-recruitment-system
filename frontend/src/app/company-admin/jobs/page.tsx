@@ -1,4 +1,6 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
@@ -17,6 +19,8 @@ import {
 } from "lucide-react";
 
 import { apiRequest } from "@/lib/api";
+import RichTextEditor from "@/components/ui/rich-text-editor";
+import { richTextHasContent, sanitizeRichText } from "@/lib/rich-text";
 import Skeleton from "../../../components/ui/skeleton";
 
 type JobStatus = "DRAFT" | "PUBLISHED" | "CLOSED";
@@ -99,31 +103,6 @@ function statusClass(status: JobStatus) {
     PUBLISHED: "jm-status-published",
     CLOSED: "jm-status-closed",
   }[status];
-}
-
-/* Welcome section skeleton */
-function JobWelcomeSkeleton() {
-  return (
-    <section className="jm-welcome">
-      <div style={{ flex: 1 }}>
-        <Skeleton variant="text" width={130} height={12} />
-
-        <div style={{ marginTop: 12 }}>
-          <Skeleton variant="text" width="55%" height={28} />
-        </div>
-
-        <div style={{ marginTop: 10 }}>
-          <Skeleton variant="text" width="75%" height={14} />
-        </div>
-      </div>
-
-      <Skeleton
-        variant="rectangle"
-        width={150}
-        height={44}
-      />
-    </section>
-  );
 }
 
 /* Complete job management skeleton */
@@ -275,7 +254,7 @@ export default function JobManagementPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
@@ -396,11 +375,16 @@ export default function JobManagementPage() {
     setFormError("");
 
     const title = form.title.trim();
-    const description = form.description.trim();
-    const requirements = form.requirements.trim();
+    const description = sanitizeRichText(form.description);
+    const requirements = sanitizeRichText(form.requirements);
     const location = form.location.trim();
 
-    if (!title || !description || !requirements || !location) {
+    if (
+      !title ||
+      !richTextHasContent(description) ||
+      !richTextHasContent(requirements) ||
+      !location
+    ) {
       setFormError("Please complete all required fields.");
       return;
     }
@@ -473,10 +457,9 @@ export default function JobManagementPage() {
 
       setModalOpen(false);
       await loadJobs(true);
+      toast.success(editingJob ? "Job updated successfully." : "Job created successfully.");
     } catch (err) {
-      setFormError(
-        err instanceof Error ? err.message : "Unable to save job."
-      );
+      setError(err instanceof Error ? err.message : "Unable to save job.");
     } finally {
       setSaving(false);
     }
@@ -503,9 +486,7 @@ export default function JobManagementPage() {
 
       await loadJobs(true);
     } catch (err) {
-      window.alert(
-        err instanceof Error ? err.message : "Unable to update job."
-      );
+      setError(err instanceof Error ? err.message : "Unable to update job.");
     } finally {
       setActionId(null);
     }
@@ -515,33 +496,28 @@ export default function JobManagementPage() {
     <>
       <div className="ca-content jm-content">
 
-        {/* Welcome skeleton / real welcome section */}
-        {loading ? (
-          <JobWelcomeSkeleton />
-        ) : (
-          <section className="jm-welcome">
-            <div>
-              <span className="jm-eyebrow">
-                COMPANY WORKSPACE
-              </span>
+        <section className="jm-welcome">
+          <div>
+            <span className="jm-eyebrow">
+              COMPANY WORKSPACE
+            </span>
 
-              <h2>Manage your job openings</h2>
+            <h2>Manage your job openings</h2>
 
-              <p>
-                Create new opportunities, manage existing vacancies
-                and find the right candidates for your company.
-              </p>
-            </div>
+            <p>
+              Create new opportunities, manage existing vacancies
+              and find the right candidates for your company.
+            </p>
+          </div>
 
-            <button
-              className="jm-create-button"
-              onClick={openCreateModal}
-            >
-              <Plus size={19} />
-              Create New Job
-            </button>
-          </section>
-        )}
+          <button
+            className="jm-create-button"
+            onClick={openCreateModal}
+          >
+            <Plus size={19} />
+            Create New Job
+          </button>
+        </section>
 
         {/* Statistics and job-list skeleton / real content */}
         {loading ? (
@@ -949,34 +925,25 @@ export default function JobManagementPage() {
                   />
                 </label>
 
-                <label className="jm-field jm-full">
-                  Job Description *
-                  <textarea
-                    required
-                    rows={5}
-                    placeholder="Describe the job responsibilities..."
+                <div className="jm-field jm-full">
+                  <span>Job Description *</span>
+                  <RichTextEditor
+                    label="Job Description"
+                    placeholder="Describe the role, responsibilities, and what the candidate will do..."
                     value={form.description}
-                    onChange={(event) =>
-                      updateForm("description", event.target.value)
-                    }
+                    onChange={(value) => updateForm("description", value)}
                   />
-                </label>
+                </div>
 
-                <label className="jm-field jm-full">
-                  Requirements *
-                  <textarea
-                    required
-                    rows={5}
-                    placeholder="List the skills and qualifications required..."
+                <div className="jm-field jm-full">
+                  <span>Requirements *</span>
+                  <RichTextEditor
+                    label="Job requirements"
+                    placeholder="List the skills, experience, and qualifications required..."
                     value={form.requirements}
-                    onChange={(event) =>
-                      updateForm(
-                        "requirements",
-                        event.target.value
-                      )
-                    }
+                    onChange={(value) => updateForm("requirements", value)}
                   />
-                </label>
+                </div>
               </div>
 
               {formError && (

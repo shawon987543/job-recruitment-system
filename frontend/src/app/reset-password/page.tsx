@@ -1,4 +1,6 @@
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
 
@@ -11,8 +13,8 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useToastErrorState();
+  const [success, setSuccess] = useToastSuccessState();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -49,9 +51,10 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    try {
-      setLoading(true);
+    setLoading(true);
+    const loadingToast = toast.loading("Resetting your password...");
 
+    try {
       const response = await fetch(
         `${API_URL}/auth/reset-password`,
         {
@@ -79,6 +82,7 @@ export default function ResetPasswordPage() {
       setSuccess(
         "Your password has been reset successfully. You can now log in."
       );
+      toast.dismiss(loadingToast);
 
       setNewPassword("");
       setConfirmPassword("");
@@ -89,6 +93,7 @@ export default function ResetPasswordPage() {
           : "Something went wrong. Please try again."
       );
     } finally {
+      toast.dismiss(loadingToast);
       setLoading(false);
     }
   }

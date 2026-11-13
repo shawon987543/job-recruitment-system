@@ -1,5 +1,7 @@
 
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
@@ -9,7 +11,6 @@ import {
   CalendarDays,
   Clock3,
   FileText,
-  RefreshCw,
   XCircle,
   ArrowRight,
   Building2,
@@ -18,6 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import Skeleton from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
 import "./applications.css";
 
@@ -48,11 +50,12 @@ interface Application {
   appliedAt: string;
   updatedAt: string;
   withdrawnAt: string | null;
+  reapplyDisabledReason?: string | null;
   job: ApplicationJob | null;
 }
 
 const statusLabels: Record<ApplicationStatus, string> = {
-  PENDING: "Pending",
+  PENDING: "Applied",
   SHORTLISTED: "Shortlisted",
   INTERVIEW: "Interview",
   SELECTED: "Selected",
@@ -85,11 +88,63 @@ function formatJobType(jobType: string | undefined) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function getReapplyDisabledReason(application: Application) {
+  if (application.reapplyDisabledReason) {
+    return application.reapplyDisabledReason;
+  }
+
+  if (!application.job) {
+    return "This job is no longer available.";
+  }
+
+  if (application.job.status !== "PUBLISHED") {
+    return application.job.status === "CLOSED"
+      ? "This job is closed and cannot accept reapplications."
+      : "This job is not currently accepting applications.";
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  if (application.job.deadline && application.job.deadline < today) {
+    return "The application deadline has passed.";
+  }
+
+  return null;
+}
+
+function ApplicationListSkeleton() {
+  return (
+    <div className="application-list" aria-label="Loading applications" aria-busy="true">
+      {[0, 1, 2].map((item) => (
+        <article className="application-card" key={item}>
+          <div className="application-card-top">
+            <Skeleton variant="rectangle" width={48} height={48} />
+            <div style={{ flex: 1, display: "grid", gap: 9 }}>
+              <Skeleton variant="text" width="55%" height={18} />
+              <Skeleton variant="text" width="35%" height={13} />
+            </div>
+            <Skeleton variant="rectangle" width={95} height={28} rounded />
+          </div>
+          <div className="application-job-meta">
+            <Skeleton variant="text" width={120} height={13} />
+            <Skeleton variant="text" width={105} height={13} />
+            <Skeleton variant="text" width={125} height={13} />
+          </div>
+          <div className="application-card-footer">
+            <Skeleton variant="text" width={80} height={12} />
+            <Skeleton variant="rectangle" width={110} height={34} />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default function MyApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [withdrawingId, setWithdrawingId] = useState<number | null>(null);
+  const [reapplyingId, setReapplyingId] = useState<number | null>(null);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -142,20 +197,51 @@ export default function MyApplicationsPage() {
             : application,
         ),
       );
+      toast.success("Application withdrawn.");
     } catch (err) {
-      alert(
-        err instanceof Error
-          ? err.message
-          : "Unable to withdraw this application.",
+      setError(
+        err instanceof Error ? err.message : "Unable to withdraw this application.",
       );
     } finally {
       setWithdrawingId(null);
     }
   };
 
+  const handleReapply = async (application: Application) => {
+    if (getReapplyDisabledReason(application) || reapplyingId !== null) return;
+
+    try {
+      setReapplyingId(application.id);
+      const updated = await apiRequest(
+        `/applications/${application.id}/reapply`,
+        { method: "POST" },
+      );
+
+      setApplications((previous) =>
+        previous.map((item) =>
+          item.id === application.id
+            ? {
+                ...item,
+                ...updated,
+                status: "PENDING",
+                reapplyDisabledReason: null,
+              }
+            : item,
+        ),
+      );
+      toast.success("Your application has been reactivated.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to reapply for this job.",
+      );
+    } finally {
+      setReapplyingId(null);
+    }
+  };
+
   const filters = [
     { label: "All Applications", value: "ALL" },
-    { label: "Pending", value: "PENDING" },
+    { label: "Applied", value: "PENDING" },
     { label: "Shortlisted", value: "SHORTLISTED" },
     { label: "Interview", value: "INTERVIEW" },
     { label: "Selected", value: "SELECTED" },
@@ -177,8 +263,131 @@ export default function MyApplicationsPage() {
     return matchesFilter && matchesSearch;
   });
 
+  const withdrawnApplications = filteredApplications.filter(
+    (application) => application.status === "WITHDRAWN",
+  );
+  const activeApplications = filteredApplications.filter(
+    (application) => application.status !== "WITHDRAWN",
+  );
+
   const countByStatus = (status: string) =>
     applications.filter((application) => application.status === status).length;
+
+  const renderApplicationCard = (application: Application) => {
+    const status = application.status;
+    const reapplyDisabledReason = getReapplyDisabledReason(application);
+
+    return (
+      <article className="application-card" key={application.id}>
+        <div className="application-card-top">
+          <div className="application-job-icon">
+            <BriefcaseBusiness size={23} />
+          </div>
+          <div className="application-job-info">
+            <h3>{application.job?.title || "Job no longer available"}</h3>
+            <div className="application-job-company">
+              <Building2 size={15} />
+              <span>Job ID: #{application.jobId}</span>
+            </div>
+          </div>
+          <span className={`application-status status-${status.toLowerCase()}`}>
+            {statusLabels[status] || status}
+          </span>
+          {status === "WITHDRAWN" && (
+            <div className="reapply-control">
+              <button
+                type="button"
+                className="reapply-button"
+                onClick={() => void handleReapply(application)}
+                disabled={
+                  Boolean(reapplyDisabledReason) ||
+                  reapplyingId !== null
+                }
+                title={reapplyDisabledReason || undefined}
+              >
+                {reapplyingId === application.id ? "Reapplying..." : "Reapply"}
+              </button>
+              {reapplyDisabledReason && (
+                <p className="reapply-blocked-reason" role="note">
+                  {reapplyDisabledReason}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="application-job-meta">
+          <span>
+            <MapPin size={16} />
+            {application.job?.location || "Location not available"}
+          </span>
+          <span>
+            <BriefcaseBusiness size={16} />
+            {formatJobType(application.job?.jobType)}
+          </span>
+          <span>
+            <CalendarDays size={16} />
+            Applied {formatDate(application.appliedAt)}
+          </span>
+        </div>
+
+        {application.job?.deadline && (
+          <div className="application-deadline">
+            <Clock3 size={15} />
+            Application deadline: {formatDate(application.job.deadline)}
+          </div>
+        )}
+
+        {application.withdrawnAt && (
+          <div className="application-history-note">
+            {status === "WITHDRAWN" ? "Withdrawn" : "Previously withdrawn"} on{" "}
+            {formatDate(application.withdrawnAt)}.
+          </div>
+        )}
+
+        {application.coverLetter && (
+          <div className="application-cover-letter">
+            <strong>Cover letter</strong>
+            <p>{application.coverLetter}</p>
+          </div>
+        )}
+
+        {application.cvUrl && (
+          <div className="application-cv">
+            <FileText size={16} />
+            <span>CV attached to application</span>
+          </div>
+        )}
+
+        <div className="application-card-footer">
+          <span className="application-id">Application ID: #{application.id}</span>
+          <div className="application-actions">
+            {application.job && (
+              <Link
+                href={`/candidate/jobs/${application.job.id}`}
+                className="application-details-link"
+              >
+                View Job <ArrowRight size={16} />
+              </Link>
+            )}
+
+            {status === "PENDING" && (
+              <button
+                type="button"
+                className="withdraw-button"
+                onClick={() => void handleWithdraw(application.id)}
+                disabled={withdrawingId === application.id}
+              >
+                <XCircle size={16} />
+                {withdrawingId === application.id ? "Withdrawing..." : "Withdraw"}
+              </button>
+            )}
+
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <main className="my-applications-page">
@@ -204,14 +413,14 @@ export default function MyApplicationsPage() {
           </Link>
         </div>
 
-        <section className="application-stats">
+        <section className="application-stats" aria-busy={loading}>
           <div className="application-stat-card">
             <div className="application-stat-icon total-icon">
               <FileText size={21} />
             </div>
             <div>
               <span>Total Applications</span>
-              <strong>{applications.length}</strong>
+              {loading ? <Skeleton variant="number" width={52} /> : <strong>{applications.length}</strong>}
             </div>
           </div>
 
@@ -220,8 +429,8 @@ export default function MyApplicationsPage() {
               <Clock3 size={21} />
             </div>
             <div>
-              <span>Pending</span>
-              <strong>{countByStatus("PENDING")}</strong>
+              <span>Applied</span>
+              {loading ? <Skeleton variant="number" width={52} /> : <strong>{countByStatus("PENDING")}</strong>}
             </div>
           </div>
 
@@ -231,7 +440,7 @@ export default function MyApplicationsPage() {
             </div>
             <div>
               <span>Interviews</span>
-              <strong>{countByStatus("INTERVIEW")}</strong>
+              {loading ? <Skeleton variant="number" width={52} /> : <strong>{countByStatus("INTERVIEW")}</strong>}
             </div>
           </div>
 
@@ -241,7 +450,7 @@ export default function MyApplicationsPage() {
             </div>
             <div>
               <span>Selected</span>
-              <strong>{countByStatus("SELECTED")}</strong>
+              {loading ? <Skeleton variant="number" width={52} /> : <strong>{countByStatus("SELECTED")}</strong>}
             </div>
           </div>
         </section>
@@ -250,22 +459,17 @@ export default function MyApplicationsPage() {
           <div className="applications-toolbar">
             <div>
               <h2>Your Applications</h2>
-              <p>
-                {applications.length}{" "}
-                {applications.length === 1 ? "application" : "applications"}{" "}
-                submitted
-              </p>
+              {loading ? (
+                <Skeleton variant="text" width={170} height={13} />
+              ) : (
+                <p>
+                  {applications.length}{" "}
+                  {applications.length === 1 ? "application" : "applications"}{" "}
+                  submitted
+                </p>
+              )}
             </div>
 
-            <button
-              type="button"
-              className="applications-refresh-button"
-              onClick={() => void fetchApplications()}
-              disabled={loading}
-            >
-              <RefreshCw size={16} className={loading ? "spin-icon" : ""} />
-              Refresh
-            </button>
           </div>
 
           <div className="applications-search">
@@ -297,11 +501,7 @@ export default function MyApplicationsPage() {
           </div>
 
           {loading ? (
-            <div className="applications-message">
-              <RefreshCw size={30} className="spin-icon" />
-              <h3>Loading applications...</h3>
-              <p>Please wait while we retrieve your applications.</p>
-            </div>
+            <ApplicationListSkeleton />
           ) : error ? (
             <div className="applications-message error-message">
               <AlertCircle size={34} />
@@ -314,138 +514,55 @@ export default function MyApplicationsPage() {
                 Try Again
               </button>
             </div>
-          ) : filteredApplications.length === 0 ? (
-            <div className="applications-message empty-message">
-              <div className="empty-applications-icon">
-                <BriefcaseBusiness size={34} />
-              </div>
-
-              <h3>
-                {applications.length === 0
-                  ? "No applications yet"
-                  : "No matching applications"}
-              </h3>
-
-              <p>
-                {applications.length === 0
-                  ? "You haven't applied for any jobs yet. Explore available jobs and submit your first application."
-                  : "Try changing your search or selecting another status filter."}
-              </p>
-
-              {applications.length === 0 && (
-                <Link href="/candidate/jobs" className="empty-browse-button">
-                  Explore Jobs <ArrowRight size={17} />
-                </Link>
-              )}
-            </div>
           ) : (
-            <div className="application-list">
-              {filteredApplications.map((application) => {
-                const status = application.status;
-                const canWithdraw = status === "PENDING";
+            <div className="application-sections">
+              {activeApplications.length > 0 && (
+                <div className="application-list">
+                  {activeApplications.map(renderApplicationCard)}
+                </div>
+              )}
 
-                return (
-                  <article
-                    className="application-card"
-                    key={application.id}
-                  >
-                    <div className="application-card-top">
-                      <div className="application-job-icon">
-                        <BriefcaseBusiness size={23} />
-                      </div>
-
-                      <div className="application-job-info">
-                        <h3>
-                          {application.job?.title || "Job no longer available"}
-                        </h3>
-
-                        <div className="application-job-company">
-                          <Building2 size={15} />
-                          <span>Job ID: #{application.jobId}</span>
-                        </div>
-                      </div>
-
-                      <span
-                        className={`application-status status-${status.toLowerCase()}`}
-                      >
-                        {statusLabels[status] || status}
-                      </span>
+              {activeApplications.length === 0 &&
+                withdrawnApplications.length === 0 && (
+                  <div className="applications-message empty-message">
+                    <div className="empty-applications-icon">
+                      <BriefcaseBusiness size={34} />
                     </div>
+                    <h3>
+                      {applications.length === 0
+                        ? "No applications yet"
+                        : "No matching applications"}
+                    </h3>
+                    <p>
+                      {applications.length === 0
+                        ? "You haven't applied for any jobs yet. Explore available jobs and submit your first application."
+                        : "Try changing your search or selecting another status filter."}
+                    </p>
+                    {applications.length === 0 && (
+                      <Link href="/candidate/jobs" className="empty-browse-button">
+                        Explore Jobs <ArrowRight size={17} />
+                      </Link>
+                    )}
+                  </div>
+                )}
 
-                    <div className="application-job-meta">
-                      <span>
-                        <MapPin size={16} />
-                        {application.job?.location || "Location not available"}
-                      </span>
-
-                      <span>
-                        <BriefcaseBusiness size={16} />
-                        {formatJobType(application.job?.jobType)}
-                      </span>
-
-                      <span>
-                        <CalendarDays size={16} />
-                        Applied {formatDate(application.appliedAt)}
-                      </span>
+              {(activeFilter === "ALL" || activeFilter === "WITHDRAWN") &&
+                withdrawnApplications.length > 0 && (
+                  <section className="withdrawn-applications-section">
+                    <div className="withdrawn-applications-heading">
+                      <div>
+                        <h3>Withdrawn Applications</h3>
+                        <p>
+                          Reapply while the job is still accepting applications.
+                        </p>
+                      </div>
+                      <span>{withdrawnApplications.length}</span>
                     </div>
-
-                    {application.job?.deadline && (
-                      <div className="application-deadline">
-                        <Clock3 size={15} />
-                        Application deadline:{" "}
-                        {formatDate(application.job.deadline)}
-                      </div>
-                    )}
-
-                    {application.coverLetter && (
-                      <div className="application-cover-letter">
-                        <strong>Cover letter</strong>
-                        <p>{application.coverLetter}</p>
-                      </div>
-                    )}
-
-                    {application.cvUrl && (
-                      <div className="application-cv">
-                        <FileText size={16} />
-                        <span>CV attached to application</span>
-                      </div>
-                    )}
-
-                    <div className="application-card-footer">
-                      <span className="application-id">
-                        Application ID: #{application.id}
-                      </span>
-
-                      <div className="application-actions">
-                        {application.job && (
-                          <Link
-                            href={`/candidate/jobs/${application.job.id}`}
-                            className="application-details-link"
-                          >
-                            View Job <ArrowRight size={16} />
-                          </Link>
-                        )}
-
-                        {canWithdraw && (
-                          <button
-                            type="button"
-                            className="withdraw-button"
-                            onClick={() =>
-                              void handleWithdraw(application.id)
-                            }
-                            disabled={withdrawingId === application.id}
-                          >
-                            <XCircle size={16} />
-                            {withdrawingId === application.id
-                              ? "Withdrawing..."
-                              : "Withdraw"}
-                          </button>
-                        )}
-                      </div>
+                    <div className="application-list">
+                      {withdrawnApplications.map(renderApplicationCard)}
                     </div>
-                  </article>
-                );
-              })}
+                  </section>
+                )}
             </div>
           )}
         </section>

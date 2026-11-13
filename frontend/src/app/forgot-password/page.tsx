@@ -1,4 +1,6 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -15,7 +17,7 @@ const API_URL =
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [success, setSuccess] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -23,6 +25,7 @@ export default function ForgotPasswordPage() {
     setError("");
     setSuccess(false);
     setLoading(true);
+    const loadingToast = toast.loading("Sending reset instructions...");
 
     try {
       const response = await fetch(`${API_URL}/auth/forgot-password`, {
@@ -41,7 +44,7 @@ export default function ForgotPasswordPage() {
         );
       }
 
-      setSuccess(true);
+      toast.success("If an account exists for this email, password reset instructions have been sent.");
     } catch (err) {
       setError(
         err instanceof Error
@@ -49,6 +52,7 @@ export default function ForgotPasswordPage() {
           : "Something went wrong. Please try again.",
       );
     } finally {
+      toast.dismiss(loadingToast);
       setLoading(false);
     }
   }

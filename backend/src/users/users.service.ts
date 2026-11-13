@@ -8,7 +8,7 @@ import {
 import { Company } from '../companies/entities/company.entity';
 import { CompanyStatus } from '../common/enums/company-status.enum';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, IsNull } from 'typeorm';
+import { Repository, Not, IsNull, In } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -126,7 +126,7 @@ async findCompanyAdminRequests() {
 }
   // Get all Company Admins
 async findAllCompanyAdmins() {
-  return this.userRepository.find({
+  const admins = await this.userRepository.find({
     where: {
       role: Role.COMPANY_ADMIN,
     },
@@ -145,6 +145,32 @@ async findAllCompanyAdmins() {
       createdAt: 'DESC',
     },
   });
+
+  const companyIds = [
+    ...new Set(
+      admins
+        .map((admin) => admin.companyId)
+        .filter((companyId): companyId is number => companyId !== null),
+    ),
+  ];
+
+  const companies = companyIds.length
+    ? await this.companyRepository.find({
+        where: { id: In(companyIds) },
+        select: { id: true, name: true },
+      })
+    : [];
+
+  const companyNames = new Map(
+    companies.map((company) => [company.id, company.name]),
+  );
+
+  return admins.map((admin) => ({
+    ...admin,
+    companyName: admin.companyId
+      ? companyNames.get(admin.companyId) ?? null
+      : null,
+  }));
 }  
 
 

@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -12,13 +13,15 @@ import {
   Clock,
   FileText,
   ListChecks,
-  RefreshCw,
   AlertCircle,
   Send,
   CheckCircle2,
   ClipboardList,
+  RefreshCw,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
+import RichTextContent from "@/components/ui/rich-text-content";
+import Skeleton from "@/components/ui/skeleton";
 import "./job-details.css";
 
 type Job = {
@@ -86,18 +89,66 @@ function formatDate(value: string | null | undefined) {
   });
 }
 
+function JobDetailsSkeleton() {
+  return (
+    <div aria-label="Loading job details" aria-busy="true">
+      <section className="job-details-hero">
+        <div className="job-details-hero-top">
+          <Skeleton variant="text" width={155} height={12} />
+          <Skeleton variant="rectangle" width={90} height={28} rounded />
+        </div>
+        <div className="job-details-title-row">
+          <Skeleton variant="rectangle" width={68} height={68} />
+          <div style={{ display: "grid", gap: 12, flex: 1 }}>
+            <Skeleton variant="text" width="58%" height={30} />
+            <Skeleton variant="text" width="34%" height={15} />
+          </div>
+        </div>
+        <div className="job-details-hero-meta">
+          {[0, 1, 2].map((item) => (
+            <Skeleton key={item} variant="text" width={128} height={14} />
+          ))}
+        </div>
+      </section>
+      <div className="job-details-layout">
+        <div className="job-details-main">
+          {[0, 1].map((card) => (
+            <section className="job-details-card" key={card}>
+              <Skeleton variant="text" width="38%" height={22} />
+              <div style={{ display: "grid", gap: 13, marginTop: 22 }}>
+                {[0, 1, 2, 3, 4].map((line) => (
+                  <Skeleton key={line} variant="text" height={14} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+        <aside className="job-details-sidebar">
+          <section className="job-details-card" style={{ display: "grid", gap: 18 }}>
+            <Skeleton variant="text" width="58%" height={20} />
+            {[0, 1, 2, 3].map((item) => (
+              <Skeleton key={item} variant="rectangle" height={48} />
+            ))}
+            <Skeleton variant="rectangle" height={44} />
+          </section>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
   const jobId = params.id;
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
 
   const [coverLetter, setCoverLetter] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [applicationMessage, setApplicationMessage] = useState("");
-  const [applicationError, setApplicationError] = useState("");
+  const [applicationMessage, setApplicationMessage] = useToastSuccessState();
+  const [applicationError, setApplicationError] = useToastErrorState();
   const [application, setApplication] = useState<Application | null>(null);
   const [checkingApplication, setCheckingApplication] = useState(true);
 
@@ -221,11 +272,7 @@ export default function JobDetailsPage() {
       </header>
 
       {loading ? (
-        <div className="job-details-state">
-          <RefreshCw className="job-details-spinner" size={34} />
-          <h2>Loading job details...</h2>
-          <p>Please wait while we retrieve the job information.</p>
-        </div>
+        <JobDetailsSkeleton />
       ) : error || !job ? (
         <div className="job-details-state job-details-error">
           <AlertCircle size={42} />
@@ -296,9 +343,10 @@ export default function JobDetailsPage() {
 
                 <div className="job-details-content">
                   {job.description?.trim() ? (
-                    <p className="job-details-text">
-                      {job.description}
-                    </p>
+                    <RichTextContent
+                      html={job.description}
+                      className="job-details-text"
+                    />
                   ) : (
                     <p className="job-details-muted">
                       No job description provided.
@@ -317,9 +365,10 @@ export default function JobDetailsPage() {
 
                 <div className="job-details-content">
                   {job.requirements?.trim() ? (
-                    <p className="job-details-text">
-                      {job.requirements}
-                    </p>
+                    <RichTextContent
+                      html={job.requirements}
+                      className="job-details-text"
+                    />
                   ) : (
                     <p className="job-details-muted">
                       No specific requirements provided.
@@ -404,9 +453,11 @@ export default function JobDetailsPage() {
                 </div>
 
                 {checkingApplication ? (
-                  <div className="apply-job-loading">
-                    <RefreshCw size={19} className="job-details-spinner" />
-                    Checking your application...
+                  <div className="apply-job-loading" aria-busy="true">
+                    <div style={{ display: "grid", gap: 12, width: "100%" }}>
+                      <Skeleton variant="text" width="55%" height={14} />
+                      <Skeleton variant="rectangle" height={46} />
+                    </div>
                   </div>
                 ) : application ? (
                   <div className="already-applied">

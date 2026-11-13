@@ -1,5 +1,7 @@
 
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
@@ -17,7 +19,7 @@ export default function CandidateSignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [loading, setLoading] = useState(false);
 
   async function handleSignup(event: FormEvent<HTMLFormElement>) {
@@ -42,6 +44,7 @@ export default function CandidateSignupPage() {
     }
 
     setLoading(true);
+    const loadingToast = toast.loading("Creating your account...");
 
     try {
       // 1. Register candidate account.
@@ -104,6 +107,7 @@ export default function CandidateSignupPage() {
       sessionStorage.setItem("access_token", loginData.access_token);
       sessionStorage.setItem("refresh_token", loginData.refresh_token);
       sessionStorage.setItem("user", JSON.stringify(loginData.user));
+      toast.success("Your account is ready.");
 
       // 4. Redirect to existing Candidate Dashboard.
       window.location.href = "/candidate";
@@ -114,6 +118,7 @@ export default function CandidateSignupPage() {
           : "Unable to create your account.",
       );
     } finally {
+      toast.dismiss(loadingToast);
       setLoading(false);
     }
   }

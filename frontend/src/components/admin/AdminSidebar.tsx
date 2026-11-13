@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 import Skeleton from "@/components/ui/skeleton";
+import toast from "react-hot-toast";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -115,6 +116,7 @@ export default function AdminSidebar({
     if (loggingOut) return;
 
     setLoggingOut(true);
+    const loadingToast = toast.loading("Signing out...");
 
     const accessToken = sessionStorage.getItem("access_token");
 
@@ -132,6 +134,8 @@ export default function AdminSidebar({
       sessionStorage.removeItem("refresh_token");
       sessionStorage.removeItem("user");
 
+      toast.dismiss(loadingToast);
+      toast.success("Signed out.");
       router.push("/login");
     }
   }

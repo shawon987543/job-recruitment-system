@@ -90,6 +90,17 @@ export class CandidateProfileService {
 
   return this.profileRepository.save(profile);
 }
+
+  async updateProfilePicture(
+    userId: number,
+    profilePictureUrl: string,
+  ): Promise<CandidateProfile> {
+    const profile = await this.getOrCreateProfile(userId);
+    profile.profilePictureUrl = profilePictureUrl;
+
+    return this.profileRepository.save(profile);
+  }
+
   // Add education
   async addEducation(
     userId: number,

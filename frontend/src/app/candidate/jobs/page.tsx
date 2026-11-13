@@ -1,4 +1,5 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
 import { useCallback, useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -12,9 +13,10 @@ import {
   SlidersHorizontal,
   X,
   Building2,
-  RefreshCw,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
+import RichTextContent from "@/components/ui/rich-text-content";
+import Skeleton from "@/components/ui/skeleton";
 import "./jobs.css";
 
 type Job = {
@@ -89,6 +91,31 @@ function formatDate(date: string | null) {
   });
 }
 
+function JobResultsSkeleton() {
+  return (
+    <div className="browse-job-list" aria-label="Loading jobs" aria-busy="true">
+      {[0, 1, 2, 3].map((item) => (
+        <article className="browse-job-card" key={item}>
+          <div className="browse-job-main" style={{ flex: 1 }}>
+            <Skeleton variant="rectangle" width={52} height={52} />
+            <div className="browse-job-information" style={{ flex: 1, display: "grid", gap: 10 }}>
+              <Skeleton variant="rectangle" width={95} height={20} />
+              <Skeleton variant="text" width="60%" height={19} />
+              <Skeleton variant="text" width="38%" height={13} />
+              <Skeleton variant="text" width="75%" height={13} />
+            </div>
+          </div>
+          <div className="browse-job-side" style={{ display: "grid", gap: 10 }}>
+            <Skeleton variant="text" width={105} height={11} />
+            <Skeleton variant="text" width={135} height={17} />
+            <Skeleton variant="rectangle" width={118} height={38} />
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export default function BrowseJobsPage() {
   const router = useRouter();
 
@@ -97,7 +124,7 @@ export default function BrowseJobsPage() {
   const [location, setLocation] = useState("");
   const [jobType, setJobType] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
 
   const fetchJobs = useCallback(
     async (filters: JobFilters = {}) => {
@@ -303,11 +330,7 @@ export default function BrowseJobsPage() {
         </div>
 
         {loading ? (
-          <div className="browse-state">
-            <RefreshCw className="browse-spinner" size={30} />
-            <h3>Finding opportunities...</h3>
-            <p>Please wait while we load available jobs.</p>
-          </div>
+          <JobResultsSkeleton />
         ) : error ? (
           <div className="browse-state browse-error">
             <BriefcaseBusiness size={36} />
@@ -356,6 +379,12 @@ export default function BrowseJobsPage() {
                     <p className="browse-company-name">
                       {job.companyName || "Company"}
                     </p>
+                    {job.description && (
+                      <RichTextContent
+                        html={job.description}
+                        className="browse-job-description"
+                      />
+                    )}
 
                     <div className="browse-job-meta">
                       <span>

@@ -1,4 +1,6 @@
 "use client";
+import { useToastErrorState } from "@/components/ui/toast-message-state";
+import toast from "react-hot-toast";
 import { useEffect, useMemo, useState } from "react";
 import {
   Search,
@@ -88,7 +90,7 @@ function getInitials(name: string) {
 export default function CompanyApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useToastErrorState();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
 
@@ -194,6 +196,7 @@ export default function CompanyApplicationsPage() {
             : application,
         ),
       );
+      toast.success("Application status updated.");
 
       setSelectedApplication((previous) =>
         previous
