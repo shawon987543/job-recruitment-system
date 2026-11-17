@@ -363,11 +363,6 @@ function AdminPageContent({
           {activeSection === "company-admins" ? (
             // Render the page shell and data skeletons before starting its request.
             <CompanyAdminsContent enabled={authReady} />
-          ) : !authReady ? (
-            <>
-              <StatsSkeleton />
-              <DetailSkeleton />
-            </>
           ) : (
             // Dashboard Content
             <>
@@ -477,7 +472,7 @@ function AdminPageContent({
               </div>
 
               {/* Dashboard Content */}
-              {loading ? (
+              {!authReady || loading ? (
                 <>
                   <StatsSkeleton />
                   <DetailSkeleton />
