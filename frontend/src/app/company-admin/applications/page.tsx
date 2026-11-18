@@ -46,6 +46,7 @@ interface Application {
     id: number;
     name: string;
     email: string;
+    resumeUrl?: string | null;
   } | null;
 }
 
@@ -85,6 +86,18 @@ function getInitials(name: string) {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+}
+
+function assetHref(assetUrl?: string | null) {
+  if (!assetUrl) return "#";
+  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
+    return assetUrl;
+  }
+
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+  const serverUrl = apiUrl.replace(/\/api\/?$/, "");
+  return `${serverUrl}${assetUrl.startsWith("/") ? "" : "/"}${assetUrl}`;
 }
 
 export default function CompanyApplicationsPage() {
@@ -422,10 +435,10 @@ export default function CompanyApplicationsPage() {
                         </td>
 
                         <td>
-                          {application.cvUrl ? (
+                          {application.cvUrl || application.candidate?.resumeUrl ? (
                             <a
                               className="ap-cv-link"
-                              href={application.cvUrl}
+                              href={assetHref(application.cvUrl || application.candidate?.resumeUrl)}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
@@ -543,10 +556,10 @@ export default function CompanyApplicationsPage() {
               <div className="ap-detail-section">
                 <h4>Candidate CV</h4>
 
-                {selectedApplication.cvUrl ? (
+                {selectedApplication.cvUrl || selectedApplication.candidate?.resumeUrl ? (
                   <a
                     className="ap-cv-download"
-                    href={selectedApplication.cvUrl}
+                    href={assetHref(selectedApplication.cvUrl || selectedApplication.candidate?.resumeUrl)}
                     target="_blank"
                     rel="noopener noreferrer"
                   >

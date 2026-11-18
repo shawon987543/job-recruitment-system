@@ -425,6 +425,56 @@
   font-size: 12px;
 }
 
+.application-interview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid #dce5ff;
+  border-radius: 10px;
+  background: #f5f7ff;
+}
+
+.application-interview-details {
+  display: grid;
+  gap: 5px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.application-interview-details strong {
+  color: #3548a5;
+  font-size: 14px;
+}
+
+.application-join-interview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex-shrink: 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #4357d8;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.application-join-interview:hover {
+  background: #3446bf;
+}
+
+@media (max-width: 560px) {
+  .application-interview {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .application-cover-letter {
   margin-top: 15px;
   padding: 13px;

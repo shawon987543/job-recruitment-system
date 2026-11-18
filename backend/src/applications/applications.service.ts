@@ -13,6 +13,8 @@ import { CreateApplicationDto } from './dto/create-application.dto';
 import { UpdateApplicationStatusDto } from './dto/update-application-status.dto';
 import { Job, JobStatus } from '../jobs/entities/job.entity';
 import { User } from '../users/entities/user.entity';
+import { Interview } from '../interviews/entities/interview.entity';
+import { CandidateProfile } from '../candidate-profile/entities/candidate-profile.entity';
 
 @Injectable()
 export class ApplicationsService {
@@ -28,6 +30,12 @@ export class ApplicationsService {
 
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+
+    @InjectRepository(Interview)
+    private readonly interviewsRepository: Repository<Interview>,
+
+    @InjectRepository(CandidateProfile)
+    private readonly candidateProfilesRepository: Repository<CandidateProfile>,
   ) {}
 
   // Super Admin can update any application's status.
@@ -230,10 +238,25 @@ async findAllForSuperAdmin() {
         const job = await this.jobsRepository.findOne({
           where: { id: application.jobId },
         });
+        const interviews = await this.interviewsRepository.find({
+          where: { applicationId: application.id },
+          order: { scheduledAt: 'ASC' },
+        });
 
         return {
           ...application,
           reapplyDisabledReason: this.getReapplyDisabledReason(job),
+          interviews: interviews.map(
+            ({ id, scheduledAt, type, status, meetingLink, location, notes }) => ({
+              id,
+              scheduledAt,
+              type,
+              status,
+              meetingLink,
+              location,
+              notes,
+            }),
+          ),
           job: job
             ? {
                 id: job.id,
@@ -288,12 +311,15 @@ async findAllForSuperAdmin() {
 
     return Promise.all(
       applications.map(async (application) => {
-        const [job, candidate] = await Promise.all([
+        const [job, candidate, candidateProfile] = await Promise.all([
           this.jobsRepository.findOne({
             where: { id: application.jobId },
           }),
           this.usersRepository.findOne({
             where: { id: application.candidateId },
+          }),
+          this.candidateProfilesRepository.findOne({
+            where: { user: { id: application.candidateId } },
           }),
         ]);
 
@@ -311,6 +337,7 @@ async findAllForSuperAdmin() {
                 id: candidate.id,
                 name: candidate.name,
                 email: candidate.email,
+                resumeUrl: candidateProfile?.resumeUrl ?? null,
               }
             : null,
         };

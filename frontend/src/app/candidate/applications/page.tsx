@@ -31,6 +31,16 @@ type ApplicationStatus =
   | "REJECTED"
   | "WITHDRAWN";
 
+interface ApplicationInterview {
+  id: number;
+  scheduledAt: string;
+  type: "ONLINE" | "OFFLINE";
+  status: "SCHEDULED" | "COMPLETED" | "CANCELLED";
+  meetingLink: string | null;
+  location: string | null;
+  notes: string | null;
+}
+
 interface ApplicationJob {
   id: number;
   title: string;
@@ -52,6 +62,7 @@ interface Application {
   withdrawnAt: string | null;
   reapplyDisabledReason?: string | null;
   job: ApplicationJob | null;
+  interviews?: ApplicationInterview[];
 }
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -165,7 +176,7 @@ export default function MyApplicationsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setError]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -337,6 +348,42 @@ export default function MyApplicationsPage() {
             Application deadline: {formatDate(application.job.deadline)}
           </div>
         )}
+
+        {application.interviews?.map((interview) => (
+          <div className="application-interview" key={interview.id}>
+            <div className="application-interview-details">
+              <strong>
+                {interview.status === "CANCELLED"
+                  ? "Interview cancelled"
+                  : interview.status === "COMPLETED"
+                    ? "Interview completed"
+                    : "Interview scheduled"}
+              </strong>
+              <span>
+                {formatDate(interview.scheduledAt)} at{" "}
+                {new Date(interview.scheduledAt).toLocaleTimeString("en-BD", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+              {interview.type === "OFFLINE" && interview.location && (
+                <span>Location: {interview.location}</span>
+              )}
+              {interview.notes && <span>{interview.notes}</span>}
+            </div>
+            {interview.status === "SCHEDULED" &&
+              interview.type === "ONLINE" && interview.meetingLink && (
+                <a
+                  className="application-join-interview"
+                  href={interview.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Join Interview <ArrowRight size={15} />
+                </a>
+              )}
+          </div>
+        ))}
 
         {application.withdrawnAt && (
           <div className="application-history-note">
