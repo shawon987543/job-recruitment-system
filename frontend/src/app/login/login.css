@@ -1,0 +1,191 @@
+.career-login-page.login-page {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  overflow: hidden;
+  padding: 76px 22px 32px;
+  background:
+    radial-gradient(ellipse at 15% 82%, rgba(45, 153, 140, .17), transparent 32%),
+    radial-gradient(ellipse at 87% 12%, rgba(45, 153, 140, .12), transparent 31%),
+    linear-gradient(135deg, #0d1412 0%, #111816 55%, #080c0b 100%);
+  font-family: var(--font-inter), Arial, sans-serif;
+}
+
+.career-login-page.login-page::before,
+.career-login-page.login-page::after {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid rgba(185, 226, 219, .09);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.career-login-page.login-page::before {
+  top: -190px;
+  right: -120px;
+  width: 480px;
+  height: 480px;
+}
+
+.career-login-page.login-page::after {
+  bottom: -260px;
+  left: -145px;
+  width: 580px;
+  height: 580px;
+}
+
+.career-login-page .career-login-back {
+  position: absolute;
+  top: 28px;
+  left: max(24px, calc((100vw - 1160px) / 2));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(240, 249, 247, .78);
+  font-size: 12px;
+  font-weight: 600;
+  transition: color .18s ease;
+}
+
+.career-login-page .career-login-back:hover { color: #fff; }
+
+.career-login-page .login-card {
+  width: min(100%, 435px);
+  padding: 38px 38px 27px;
+  border: 1px solid #e4efec;
+  border-radius: 19px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .27);
+}
+
+.career-login-page .login-brand {
+  gap: 11px;
+  margin-bottom: 0;
+  color: #17201e;
+  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+}
+
+.career-login-page .login-brand-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #2d998c;
+  color: #fff;
+}
+
+.career-login-page .login-heading { margin: 29px 0 22px; }
+.career-login-page .login-heading h1 {
+  margin: 0 0 7px;
+  color: #111816;
+  font-family: var(--font-plus-jakarta), var(--font-manrope), sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.9px;
+}
+
+.career-login-page .login-heading p {
+  margin: 0;
+  color: #73807d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.career-login-page .login-card label {
+  margin: 16px 0 7px;
+  color: #303b38;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.career-login-page .login-input {
+  height: 47px;
+  gap: 10px;
+  padding: 0 13px;
+  border: 1px solid #dce8e5;
+  border-radius: 9px;
+  color: #85918e;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.career-login-page .login-input:focus-within {
+  border-color: #2d998c;
+  box-shadow: 0 0 0 3px rgba(45, 153, 140, .12);
+}
+
+.career-login-page .login-input input {
+  color: #17201e;
+  font-size: 13px;
+}
+
+.career-login-page .login-input input::placeholder { color: #9aa4a1; }
+.career-login-page .password-toggle { color: #73807d; }
+.career-login-page .password-toggle:hover { background: #eaf6f4; color: #23877c; }
+.career-login-page .forgot-password-wrapper { margin: 10px 0 18px; }
+.career-login-page .forgot-password-link { color: #23877c; font-size: 12px; }
+.career-login-page .forgot-password-link:hover { color: #176d64; }
+
+.career-login-page .login-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff1ef;
+  color: #a9362e;
+  font-size: 12px;
+}
+
+.career-login-page .login-submit {
+  height: 46px;
+  margin-top: 0;
+  border: 0;
+  border-radius: 9px;
+  background: #2d998c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 750;
+  transition: background .18s ease, transform .18s ease;
+}
+
+.career-login-page .login-submit:hover { transform: translateY(-1px); background: #23877c; }
+.career-login-page .login-submit:disabled { opacity: .68; cursor: wait; }
+.career-login-page .signup-section { margin-top: 24px; }
+.career-login-page .signup-divider { margin-bottom: 13px; color: #7e8987; font-size: 11px; }
+.career-login-page .signup-divider::before,
+.career-login-page .signup-divider::after { background: #e5eeec; }
+
+.career-login-page .signup-grid { gap: 10px; }
+.career-login-page .signup-card {
+  gap: 9px;
+  padding: 10px;
+  border-color: #e0eae7;
+  border-radius: 9px;
+  color: #26312e;
+}
+
+.career-login-page .signup-card:hover {
+  transform: translateY(-1px);
+  border-color: #9bd2ca;
+  box-shadow: 0 6px 15px rgba(25, 111, 101, .09);
+}
+
+.career-login-page .signup-card-icon { width: 34px; height: 34px; border-radius: 8px; }
+.career-login-page .signup-card-text strong { color: #27322f; font-size: 12px; }
+.career-login-page .signup-card-text small { color: #75817e; font-size: 10px; }
+.career-login-page .signup-card-candidate .signup-card-icon { background: #e8f5f2; color: #258e82; }
+.career-login-page .signup-card-company .signup-card-icon { background: #e8f5f2; color: #258e82; }
+.career-login-page .signup-card-candidate:hover,
+.career-login-page .signup-card-company:hover { border-color: #78c3b8; }
+.career-login-page .login-footer { margin: 22px 0 0; color: #899491; font-size: 10px; }
+
+@media (max-width: 480px) {
+  .career-login-page.login-page { padding: 72px 16px 22px; }
+  .career-login-page .career-login-back { top: 22px; left: 18px; }
+  .career-login-page .login-card { padding: 30px 23px 23px; border-radius: 16px; }
+  .career-login-page .login-heading { margin-top: 25px; }
+  .career-login-page .signup-grid { grid-template-columns: 1fr; }
+}

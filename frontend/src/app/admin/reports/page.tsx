@@ -752,7 +752,7 @@ export default function ReportsPage() {
       {
         label: "Interview",
         value: stats.applications.interview,
-        color: "#0ea5e9",
+        color: "#43aa9e",
       },
       {
         label: "Selected",
@@ -786,11 +786,11 @@ export default function ReportsPage() {
   ];
 
   const userRows = [
-    { label: "Candidates", value: stats.users.candidates, color: "#0ea5e9" },
+    { label: "Candidates", value: stats.users.candidates, color: "#43aa9e" },
     {
       label: "Company Admins",
       value: stats.users.companyAdmins,
-      color: "#8b5cf6",
+      color: "#80c9bf",
     },
     {
       label: "Super Admins",
@@ -890,8 +890,8 @@ export default function ReportsPage() {
       value: stats.users.total,
       detail: `${stats.users.active} active users`,
       icon: <Users size={23} />,
-      color: "#2563eb",
-      background: "#eff6ff",
+      color: "#2d998c",
+      background: "#eaf6f3",
     },
     {
       title: "Total Companies",
@@ -906,7 +906,7 @@ export default function ReportsPage() {
       value: stats.jobs.total,
       detail: `${stats.jobs.published} published`,
       icon: <BriefcaseBusiness size={23} />,
-      color: "#0891b2",
+      color: "#43aa9e",
       background: "#ecfeff",
     },
     {
@@ -988,7 +988,7 @@ export default function ReportsPage() {
   // PAGE UI
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme">
       {/* SHARED ADMIN SIDEBAR */}
 
       <AdminSidebar
@@ -1117,7 +1117,7 @@ export default function ReportsPage() {
                     filteredReportsLoading ||
                     !customDateRangeReady
                       ? "#cbd5e1"
-                      : "#2563eb",
+                      : "#2d998c",
                   color: "#ffffff",
                   fontSize: 13,
                   fontWeight: 700,
@@ -1295,12 +1295,12 @@ export default function ReportsPage() {
                     {
                       label: "New Users",
                       value: filteredReports.users,
-                      color: "#2563eb",
+                      color: "#2d998c",
                     },
                     {
                       label: "New Jobs",
                       value: filteredReports.jobs,
-                      color: "#0891b2",
+                      color: "#43aa9e",
                     },
                     {
                       label: "Applications",
@@ -1512,8 +1512,8 @@ export default function ReportsPage() {
                   <span
                     style={{
                       padding: "8px 13px",
-                      background: "#eff6ff",
-                      color: "#2563eb",
+                      background: "#eaf6f3",
+                      color: "#2d998c",
                       borderRadius: 9,
                       fontSize: 12,
                       fontWeight: 700,
@@ -1548,7 +1548,7 @@ export default function ReportsPage() {
                       description="New user accounts registered each month."
                       data={monthlyAnalytics.users}
                       type="line"
-                      color="#2563eb"
+                      color="#2d998c"
                     />
 
                     <MonthlyChart
@@ -1556,7 +1556,7 @@ export default function ReportsPage() {
                       description="New jobs created by companies each month."
                       data={monthlyAnalytics.jobs}
                       type="bar"
-                      color="#0891b2"
+                      color="#43aa9e"
                     />
 
                     <MonthlyChart

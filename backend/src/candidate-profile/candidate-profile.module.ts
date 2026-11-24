@@ -5,6 +5,8 @@ import { Education } from './entities/education.entity';
 import { Experience } from './entities/experience.entity';
 import { CandidateProfileService } from './candidate-profile.service';
 import { CandidateProfileController } from './candidate-profile.controller';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { CandidateProfileController } from './candidate-profile.controller';
       Education,
       Experience,
     ]),
+
+    CloudinaryModule,
   ],
   controllers: [CandidateProfileController],
   providers: [CandidateProfileService],

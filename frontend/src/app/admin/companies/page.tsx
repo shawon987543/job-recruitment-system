@@ -651,7 +651,7 @@ export default function CompaniesPage() {
       : "");
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme">
       {/* Shared Super Admin Sidebar */}
       <AdminSidebar
         menuOpen={menuOpen}

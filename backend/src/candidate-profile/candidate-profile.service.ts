@@ -1,6 +1,7 @@
 import {
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,17 +16,23 @@ import { UpdateEducationDto } from './dto/update-education.dto';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
 
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 @Injectable()
 export class CandidateProfileService {
   constructor(
     @InjectRepository(CandidateProfile)
     private readonly profileRepository: Repository<CandidateProfile>,
 
+    private readonly CloudinaryService: CloudinaryService,
+
     @InjectRepository(Education)
     private readonly educationRepository: Repository<Education>,
 
     @InjectRepository(Experience)
     private readonly experienceRepository: Repository<Experience>,
+
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   // Find candidate profile or create an empty one
@@ -38,7 +45,7 @@ export class CandidateProfileService {
         user: true,
         educations: true,
         experiences: true,
-    },
+      },
     });
 
     if (!profile) {
@@ -49,14 +56,14 @@ export class CandidateProfileService {
 
       await this.profileRepository.save(profile);
 
-     profile = await this.profileRepository.findOne({
+      profile = await this.profileRepository.findOne({
         where: { id: profile.id },
         relations: {
-        user: true,
-        educations: true,
-        experiences: true,
-  },
-});
+          user: true,
+          educations: true,
+          experiences: true,
+        },
+      });
     }
 
     return profile!;
@@ -79,23 +86,73 @@ export class CandidateProfileService {
     return this.profileRepository.save(profile);
   }
 
-  // Resume
+  // Upload resume to Cloudinary
+  async uploadResume(
+    userId: number,
+    file: Express.Multer.File,
+  ): Promise<CandidateProfile> {
+    if (!file) {
+      throw new BadRequestException('Resume file is required');
+    }
+
+    const result = await this.cloudinaryService.uploadFile(
+      file,
+      'candidates/resumes',
+    );
+
+    const profile = await this.getOrCreateProfile(userId);
+
+    profile.resumeUrl = result.secure_url;
+
+    return this.profileRepository.save(profile);
+  }
+
+  // Update resume URL (existing method)
   async updateResume(
-  userId: number,
-  resumeUrl: string,
-): Promise<CandidateProfile> {
-  const profile = await this.getOrCreateProfile(userId);
+    userId: number,
+    resumeUrl: string,
+  ): Promise<CandidateProfile> {
+    const profile = await this.getOrCreateProfile(userId);
 
-  profile.resumeUrl = resumeUrl;
+    profile.resumeUrl = resumeUrl;
 
-  return this.profileRepository.save(profile);
-}
+    return this.profileRepository.save(profile);
+  }
 
+  // Upload profile picture to Cloudinary
+  async uploadProfilePicture(
+    userId: number,
+    file: Express.Multer.File,
+  ): Promise<{ message: string; profilePictureUrl: string; profile: CandidateProfile }> {
+    if (!file) {
+      throw new BadRequestException('Profile picture is required');
+    }
+
+    const result = await this.cloudinaryService.uploadFile(
+      file,
+      'candidates/profiles',
+    );
+
+    const profile = await this.getOrCreateProfile(userId);
+
+    profile.profilePictureUrl = result.secure_url;
+
+    await this.profileRepository.save(profile);
+
+    return {
+      message: 'Profile picture upload successfully',
+      profilePictureUrl: result.secure_url,
+      profile,
+    }
+  }
+
+  // Update profile picture URL (existing method)
   async updateProfilePicture(
     userId: number,
     profilePictureUrl: string,
   ): Promise<CandidateProfile> {
     const profile = await this.getOrCreateProfile(userId);
+
     profile.profilePictureUrl = profilePictureUrl;
 
     return this.profileRepository.save(profile);

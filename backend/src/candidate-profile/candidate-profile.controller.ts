@@ -8,7 +8,13 @@ import {
   ParseIntPipe,
   Body,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 
 import { CandidateProfileService } from './candidate-profile.service';
 
@@ -17,22 +23,15 @@ import { CreateEducationDto } from './dto/create-education.dto';
 import { UpdateEducationDto } from './dto/update-education.dto';
 import { CreateExperienceDto } from './dto/create-experience.dto';
 import { UpdateExperienceDto } from './dto/update-experience.dto';
+
 import { JwtAuthGuard } from '../auth/guards/jwt.auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/decorators/current-user.decorator';
 import { Role } from '../common/enums/role.enum';
-import {
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException,
-} from '@nestjs/common';
-
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { mkdirSync } from 'fs';
-import { join, extname } from 'path';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UsersController } from '../users/users.controller';
 
 @Controller('candidate-profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -40,6 +39,7 @@ import { join, extname } from 'path';
 export class CandidateProfileController {
   constructor(
     private readonly candidateProfileService: CandidateProfileService,
+    private readonly CloudinaryService: CloudinaryService,
   ) {}
 
   // Get candidate profile
@@ -62,120 +62,113 @@ export class CandidateProfileController {
     );
   }
 
-@Post('resume')
-@UseInterceptors(
-  FileInterceptor('resume', {
-    storage: diskStorage({
-      destination: './uploads/resumes',
-      filename: (req, file, callback) => {
-        const uniqueName =
-          `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+  // Upload resume to Cloudinary
+  @Post('resume')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('resume', {
+      storage: memoryStorage(),
+      limits: {
+        fileSize: 5 * 1024 * 1024,
+      },
+      fileFilter: (req, file, callback) => {
+        const allowedMimeTypes = [
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
 
-        callback(
-          null,
-          `${uniqueName}${extname(file.originalname).toLowerCase()}`,
-        );
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return callback(
+            new BadRequestException(
+              'Only PDF, DOC, and DOCX files are allowed',
+            ),
+            false,
+          );
+        }
+
+        callback(null, true);
       },
     }),
-    limits: {
-      fileSize: 5 * 1024 * 1024,
-    },
-    fileFilter: (req, file, callback) => {
-      const allowedMimeTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      ];
+  )
+  uploadResume(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Resume file is required');
+    }
 
-      if (!allowedMimeTypes.includes(file.mimetype)) {
-        return callback(
-          new BadRequestException('Only PDF, DOC, and DOCX files are allowed'),
-          false,
-        );
-      }
-
-      callback(null, true);
-    },
-  }),
-)
-uploadResume(
-  @CurrentUser() user: AuthenticatedUser,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  if (!file) {
-    throw new BadRequestException('Resume file is required');
+    return this.candidateProfileService.uploadResume(
+      user.userId,
+      file,
+    );
   }
 
-  const resumeUrl = `/uploads/resumes/${file.filename}`;
+  // Upload resume/upload-signature
+  @Post('resume/upload-signature')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CANDIDATE)
+  generateResumeUploadSignature(){
+    return this.CloudinaryService.generateUploadSignature(
+      'cadidate/resumes',
+    )
+  }
 
-  return this.candidateProfileService.updateResume(
-    user.userId,
-    resumeUrl,
-  );
-}
+  // Upload profile picture to Cloudinary
+  @Post('profile-picture')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('profilePicture', {
+      storage: memoryStorage(),
 
-@Post('profile-picture')
-@UseInterceptors(
-  FileInterceptor('profilePicture', {
-    storage: diskStorage({
-      destination: (req, file, callback) => {
-        const uploadDirectory = join(
-          process.cwd(),
-          'uploads',
-          'profile-pictures',
-        );
-        mkdirSync(uploadDirectory, { recursive: true });
-        callback(null, uploadDirectory);
-      },
-      filename: (req, file, callback) => {
-        const uniqueName =
-          `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      fileFilter: (req, file, callback) => {
+        const allowedMimeTypes = [
+          'image/jpeg',
+          'image/png',
+          'image/webp',
+          'image/gif',
+        ];
 
-        callback(
-          null,
-          `${uniqueName}${extname(file.originalname).toLowerCase()}`,
-        );
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+          return callback(
+            new BadRequestException(
+              'Profile pictures must be JPEG, PNG, WebP, or GIF images',
+            ),
+            false,
+          );
+        }
+
+        callback(null, true);
       },
     }),
-    limits: {
-      fileSize: 5 * 1024 * 1024,
-    },
-    fileFilter: (req, file, callback) => {
-      const allowedMimeTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-        'image/gif',
-      ];
+  )
+  uploadProfilePicture(
+    @CurrentUser() user: AuthenticatedUser,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException(
+        'A profile picture is required',
+      );
+    }
 
-      if (!allowedMimeTypes.includes(file.mimetype)) {
-        return callback(
-          new BadRequestException(
-            'Profile pictures must be JPEG, PNG, WebP, or GIF images',
-          ),
-          false,
-        );
-      }
-
-      callback(null, true);
-    },
-  }),
-)
-uploadProfilePicture(
-  @CurrentUser() user: AuthenticatedUser,
-  @UploadedFile() file: Express.Multer.File,
-) {
-  if (!file) {
-    throw new BadRequestException('A profile picture is required');
+    return this.candidateProfileService.uploadProfilePicture(
+      user.userId,
+      file,
+    );
   }
 
-  const profilePictureUrl = `/uploads/profile-pictures/${file.filename}`;
+  // profile-picture/upload-signature
 
-  return this.candidateProfileService.updateProfilePicture(
-    user.userId,
-    profilePictureUrl,
-  );
-}
+  @Post('profile-picture/upload-signature')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CANDIDATE)
+  generateProfilePictureUploadSignature(){
+    return this.CloudinaryService.generateUploadSignature(
+      'candidate/profiles'
+    );
+  }
 
   // Add education
   @Post('education')

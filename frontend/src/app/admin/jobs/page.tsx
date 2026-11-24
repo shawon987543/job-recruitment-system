@@ -8,24 +8,28 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import RichTextEditor from "@/components/ui/rich-text-editor";
-import RichTextContent from "@/components/ui/rich-text-content";
 import { richTextHasContent, sanitizeRichText } from "@/lib/rich-text";
 import Skeleton from "@/components/ui/skeleton";
-import { TableSkeleton } from "@/components/ui/table-skeleton";
 import {
-  Search,
-  RefreshCw,
-  Eye,
-  Pencil,
-  X,
-  Menu,
+  ArrowRight,
+  Bookmark,
+  Building2,
+  CalendarDays,
   CheckCircle,
   Clock,
+  MapPin,
+  Menu,
+  Pencil,
+  Search,
+  X,
   XCircle,
   BriefcaseBusiness,
+  Wallet,
 } from "lucide-react";
+import "./jobs-page.css";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
@@ -65,7 +69,7 @@ interface Job {
 }
 
 type FilterType = "ALL" | JobStatus;
-type ModalType = "view" | "edit" | null;
+type ModalType = "edit" | null;
 
 interface JobForm {
   title: string;
@@ -221,7 +225,6 @@ export default function JobsPage() {
     isFetching,
     isError,
     error: queryError,
-    refetch,
   } = useQuery<Job[]>({
     queryKey: ["admin-jobs"],
 
@@ -380,7 +383,7 @@ export default function JobsPage() {
     },
   });
 
-  const openModal = (type: ModalType, job: Job) => {
+  const openModal = useCallback((type: ModalType, job: Job) => {
     setSelectedJob(job);
     setModal(type);
     setError("");
@@ -398,7 +401,7 @@ export default function JobsPage() {
         deadline: job.deadline?.slice(0, 10) ?? "",
       });
     }
-  };
+  }, [setError, setSuccess]);
 
   const closeModal = () => {
     if (editMutation.isPending) return;
@@ -496,6 +499,11 @@ export default function JobsPage() {
     published: jobs.filter((job) => job.status === "PUBLISHED").length,
     closed: jobs.filter((job) => job.status === "CLOSED").length,
   };
+  const statusCounts: Record<JobStatus, number> = {
+    DRAFT: counts.draft,
+    PUBLISHED: counts.published,
+    CLOSED: counts.closed,
+  };
 
   const displayError =
     error ||
@@ -518,19 +526,25 @@ export default function JobsPage() {
       return "Not specified";
     }
 
-    const min = job.salaryMin?.toLocaleString() ?? "—";
-    const max = job.salaryMax?.toLocaleString() ?? "—";
+    const currency = new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      maximumFractionDigits: 0,
+    });
+    const min = job.salaryMin == null ? null : currency.format(job.salaryMin);
+    const max = job.salaryMax == null ? null : currency.format(job.salaryMax);
 
-    return `৳${min} - ৳${max}`;
+    return min && max ? `${min} – ${max}` : min || max || "Not specified";
   };
-
   const companyLabel = (job: Job) =>
     job.company?.name ||
     job.companyName ||
     `Company #${job.companyId}`;
 
+  const overviewJob = filteredJobs[0] ?? null;
+
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme admin-jobs-theme">
       <AdminSidebar
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
@@ -553,7 +567,6 @@ export default function JobsPage() {
               Manage and monitor all jobs across registered companies.
             </p>
           </div>
-
         </header>
 
         <section className="admin-content">
@@ -575,24 +588,19 @@ export default function JobsPage() {
             </div>
           )}
 
-          {/* Welcome section */}
-          <div className="company-welcome">
-            <div>
-              <span>SUPER ADMIN / JOBS</span>
-              <h2>Manage all job postings</h2>
-              <p>
-                Review job postings, update job information,
-                and manage publication status across companies.
-              </p>
-            </div>
+          <section className="admin-jobs-hero">
+            <span className="admin-jobs-eyebrow">SUPER ADMIN / JOBS</span>
+            <h2>Manage every opportunity</h2>
+            <p>
+              Review job postings, update listing details, and manage
+              publication status across companies.
+            </p>
+            <a href="#admin-jobs-list" className="admin-jobs-hero-link">
+              Explore job listings <ArrowRight size={16} />
+            </a>
+          </section>
 
-            <div className="company-welcome-icon">
-              <BriefcaseBusiness size={55} />
-            </div>
-          </div>
-
-          {/* Summary cards */}
-          <div className="company-summary-grid">
+          <div className="company-summary-grid admin-jobs-summary">
             <button
               className={`company-summary-card ${
                 filter === "ALL" ? "selected" : ""
@@ -646,148 +654,218 @@ export default function JobsPage() {
             </button>
           </div>
 
-          {/* Toolbar */}
-          <div className="company-toolbar">
-            <div>
-              <h2>All Jobs</h2>
-              <p>Search, review, and manage job postings.</p>
-            </div>
+          <div className="admin-jobs-workspace" id="admin-jobs-list">
+            <section className="admin-jobs-results" aria-labelledby="admin-jobs-heading">
+              <div className="company-toolbar admin-jobs-toolbar">
+                <div>
+                  <h2 id="admin-jobs-heading">Recent job postings</h2>
+                  <p>Search and manage listings from every company.</p>
+                </div>
 
-            <div className="company-search">
-              <Search size={18} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search jobs..."
-              />
-            </div>
-          </div>
-
-          {/* Filters */}
-          <div className="company-filter-row">
-            {(["ALL", ...statusOptions] as FilterType[]).map(
-              (item) => (
-                <button
-                  key={item}
-                  className={`company-filter ${
-                    filter === item ? "active" : ""
-                  }`}
-                  onClick={() => setFilter(item)}
-                >
-                  {item === "ALL"
-                    ? "All Jobs"
-                    : item.charAt(0) +
-                      item.slice(1).toLowerCase()}
-                </button>
-              ),
-            )}
-          </div>
-
-          {/* Jobs table */}
-          <div className="company-table-card">
-            {isLoading || isFetching ? (
-              <TableSkeleton rows={6} columns={7} />
-            ) : filteredJobs.length === 0 ? (
-              <div className="company-empty">
-                <BriefcaseBusiness size={35} />
-                <h3>No jobs found</h3>
-                <p>Try changing your search or status filter.</p>
+                <label className="company-search">
+                  <Search size={18} />
+                  <span className="sr-only">Search jobs</span>
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search jobs..."
+                  />
+                </label>
               </div>
-            ) : (
-              <div className="company-table-scroll">
-                <table className="company-table">
-                  <thead>
-                    <tr>
-                      <th>Job</th>
-                      <th>Company</th>
-                      <th>Job Type</th>
-                      <th>Salary</th>
-                      <th>Deadline</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
 
-                  <tbody>
-                    {filteredJobs.map((job) => (
-                      <tr key={job.id}>
-                        <td>
-                          <div className="company-name-cell">
-                            <div className="company-table-avatar">
-                              {job.title.charAt(0).toUpperCase()}
-                            </div>
+              <div className="company-filter-row admin-jobs-filter-row" aria-label="Filter by status">
+                {(["ALL", ...statusOptions] as FilterType[]).map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`company-filter ${filter === item ? "active" : ""}`}
+                    onClick={() => setFilter(item)}
+                  >
+                    {item === "ALL"
+                      ? "All Jobs"
+                      : item.charAt(0) + item.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
 
-                            <div>
-                              <strong>{job.title}</strong>
-                              <span>{job.location}</span>
-                            </div>
-                          </div>
-                        </td>
+              {isLoading ? (
+                <div className="admin-job-card-list" aria-label="Loading jobs" aria-busy="true">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <div className="admin-job-card-skeleton" key={index} />
+                  ))}
+                </div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="company-empty admin-jobs-empty">
+                  <BriefcaseBusiness size={35} />
+                  <h3>No jobs found</h3>
+                  <p>Try changing your search or status filter.</p>
+                </div>
+              ) : (
+                <div className="admin-job-card-list">
+                  {filteredJobs.map((job) => (
+                    <article className="admin-job-card" id={`job-${job.id}`} key={job.id}>
+                      <span className="admin-job-age">
+                        Posted {formatDate(job.createdAt)}
+                      </span>
+                      <Bookmark
+                        className="admin-job-bookmark"
+                        size={19}
+                        aria-hidden="true"
+                      />
+                      <div className="admin-job-card-heading">
+                        <span className="admin-job-company-mark" aria-hidden="true">
+                          {companyLabel(job).trim().charAt(0).toUpperCase() || "C"}
+                        </span>
+                        <div className="admin-job-title">
+                          <h3>{job.title}</h3>
+                          <p>{companyLabel(job)}</p>
+                        </div>
+                        <span className={`company-status ${job.status.toLowerCase()}`}>
+                          {job.status}
+                        </span>
+                      </div>
 
-                        <td>
-                          <div className="company-contact-cell">
-                            <strong>{companyLabel(job)}</strong>
-                          </div>
-                        </td>
+                      <div className="admin-job-card-meta">
+                        <span><BriefcaseBusiness size={16} />{job.jobType.replaceAll("_", " ")}</span>
+                        <span><Building2 size={16} />{companyLabel(job)}</span>
+                        <span><Wallet size={16} />{formatSalary(job)}</span>
+                        <span><MapPin size={16} />{job.location}</span>
+                      </div>
 
-                        <td>{job.jobType.replace("_", " ")}</td>
-                        <td>{formatSalary(job)}</td>
-                        <td>{formatDate(job.deadline)}</td>
-
-                        <td>
-                          <span
-                            className={`company-status ${job.status.toLowerCase()}`}
-                          >
-                            {job.status}
-                          </span>
-                        </td>
-
-                        <td>
-                          <div className="company-actions">
-                            <button
-                              title="View job"
-                              onClick={() => openModal("view", job)}
-                            >
-                              <Eye size={16} />
-                            </button>
-
-                            <button
-                              title="Edit job"
-                              onClick={() => openModal("edit", job)}
-                            >
-                              <Pencil size={16} />
-                            </button>
-
+                      <div className="admin-job-card-footer">
+                        <span className="admin-job-deadline">
+                          <CalendarDays size={15} />Deadline: {formatDate(job.deadline)}
+                        </span>
+                        <div className="admin-job-card-actions">
+                          <label className="admin-job-status-select">
+                            <span className="sr-only">Change status for {job.title}</span>
                             <select
-                              aria-label={`Change status for ${job.title}`}
                               value={job.status}
                               disabled={statusMutation.isPending}
                               onChange={(event) =>
-                                changeStatus(
-                                  job,
-                                  event.target.value as JobStatus,
-                                )
+                                changeStatus(job, event.target.value as JobStatus)
                               }
                             >
                               {statusOptions.map((status) => (
-                                <option key={status} value={status}>
-                                  {status}
-                                </option>
+                                <option key={status} value={status}>{status}</option>
                               ))}
                             </select>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                          </label>
+                          <button
+                            type="button"
+                            className="admin-job-details-button"
+                            onClick={() => router.push(`/admin/jobs/${job.id}`)}
+                          >
+                            Job details
+                          </button>
+                          <button
+                            type="button"
+                            className="admin-job-edit-button"
+                            aria-label={`Edit ${job.title}`}
+                            onClick={() => openModal("edit", job)}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <aside className="admin-jobs-sidebar" aria-label="Job overview and status summary">
+              <section className="admin-jobs-overview">
+                <div className="admin-jobs-sidebar-heading">
+                  <span className="admin-jobs-sidebar-icon"><BriefcaseBusiness size={17} /></span>
+                  <h2>Job Overview</h2>
+                </div>
+
+                {overviewJob ? (
+                  <>
+                    <div className="admin-jobs-overview-title">
+                      <strong>{overviewJob.title}</strong>
+                      <span>{companyLabel(overviewJob)}</span>
+                    </div>
+                    <dl className="admin-jobs-overview-list">
+                      <div><dt><Clock size={16} />Job Type</dt><dd>{overviewJob.jobType.replaceAll("_", " ")}</dd></div>
+                      <div><dt><Building2 size={16} />Company</dt><dd>{companyLabel(overviewJob)}</dd></div>
+                      <div><dt><Wallet size={16} />Offered Salary</dt><dd>{formatSalary(overviewJob)}</dd></div>
+                      <div><dt><CalendarDays size={16} />Deadline</dt><dd>{formatDate(overviewJob.deadline)}</dd></div>
+                      <div><dt><MapPin size={16} />Location</dt><dd>{overviewJob.location}</dd></div>
+                    </dl>
+                    <button
+                      type="button"
+                      className="admin-jobs-overview-button"
+                      onClick={() => router.push(`/admin/jobs/${overviewJob.id}`)}
+                    >
+                      View full details <ArrowRight size={15} />
+                    </button>
+                  </>
+                ) : (
+                  <p className="admin-jobs-sidebar-empty">Job overview will appear when listings are available.</p>
+                )}
+              </section>
+
+              <section className="admin-jobs-status-panel">
+                <span className="admin-jobs-eyebrow">LISTING STATUS</span>
+                <h2>Manage job statuses</h2>
+                <p>Choose a status below to filter postings. You can also update a listing directly from its card.</p>
+                <div className="admin-jobs-status-links">
+                  {statusOptions.map((status) => (
+                    <button
+                      type="button"
+                      key={status}
+                      className={filter === status ? "active" : ""}
+                      onClick={() => setFilter(status)}
+                    >
+                      <span className={`admin-jobs-status-dot ${status.toLowerCase()}`} />
+                      {status.charAt(0) + status.slice(1).toLowerCase()}
+                      <strong>{isLoading ? "—" : statusCounts[status]}</strong>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </aside>
           </div>
+
+          <footer className="admin-jobs-footer">
+            <div className="admin-jobs-footer-main">
+              <div className="admin-jobs-footer-about">
+                <span className="admin-jobs-footer-brand"><BriefcaseBusiness size={19} />CareerHub Admin</span>
+                <p>Managing opportunities and keeping hiring moving forward.</p>
+              </div>
+              <nav className="admin-jobs-footer-links" aria-label="Admin links">
+                <h3>Workspace</h3>
+                <Link href="/admin">Dashboard</Link>
+                <Link href="/admin/companies">Companies</Link>
+                <Link href="/admin/applications">Applications</Link>
+              </nav>
+              <div className="admin-jobs-footer-links">
+                <h3>Job status</h3>
+                {(["ALL", ...statusOptions] as FilterType[]).map((status) => (
+                  <button
+                    type="button"
+                    key={status}
+                    onClick={() => {
+                      setFilter(status);
+                      document.getElementById("admin-jobs-list")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                  >
+                    {status === "ALL" ? "All jobs" : status.charAt(0) + status.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="admin-jobs-footer-bottom">
+              <span>© {new Date().getFullYear()} CareerHub. All rights reserved.</span>
+              <span>Super Admin workspace</span>
+            </div>
+          </footer>
         </section>
       </main>
 
-      {/* Job modal */}
+      {/* Job edit modal */}
       {modal && selectedJob && (
         <div
           className="company-modal-backdrop"
@@ -795,103 +873,25 @@ export default function JobsPage() {
         >
           <div
             className="company-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-job-modal-title"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="company-modal-header">
               <div>
-                <h2>
-                  {modal === "view" ? "Job Details" : "Edit Job"}
-                </h2>
+                <h2 id="admin-job-modal-title">Edit Job</h2>
                 <p>{selectedJob.title}</p>
               </div>
 
               <button
+                type="button"
                 onClick={closeModal}
                 aria-label="Close modal"
               >
                 <X size={20} />
               </button>
             </div>
-
-            {modal === "view" && (
-              <div className="company-details">
-                <div>
-                  <span>Job Title</span>
-                  <strong>{selectedJob.title}</strong>
-                </div>
-
-                <div>
-                  <span>Company</span>
-                  <strong>{companyLabel(selectedJob)}</strong>
-                </div>
-
-                <div>
-                  <span>Location</span>
-                  <strong>{selectedJob.location}</strong>
-                </div>
-
-                <div>
-                  <span>Job Type</span>
-                  <strong>
-                    {selectedJob.jobType.replace("_", " ")}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Salary</span>
-                  <strong>{formatSalary(selectedJob)}</strong>
-                </div>
-
-                <div>
-                  <span>Deadline</span>
-                  <strong>{formatDate(selectedJob.deadline)}</strong>
-                </div>
-
-                <div>
-                  <span>Status</span>
-                  <strong>{selectedJob.status}</strong>
-                </div>
-
-                <div>
-                  <span>Created By</span>
-                  <strong>User #{selectedJob.createdBy}</strong>
-                </div>
-
-                <div className="full">
-                  <span>Description</span>
-                  <RichTextContent
-                    html={selectedJob.description}
-                    className="admin-job-rich-text"
-                  />
-                </div>
-
-                <div className="full">
-                  <span>Requirements</span>
-                  <RichTextContent
-                    html={selectedJob.requirements}
-                    className="admin-job-rich-text"
-                  />
-                </div>
-
-                <div>
-                  <span>Created At</span>
-                  <strong>
-                    {new Date(
-                      selectedJob.createdAt,
-                    ).toLocaleDateString()}
-                  </strong>
-                </div>
-
-                <div>
-                  <span>Last Updated</span>
-                  <strong>
-                    {new Date(
-                      selectedJob.updatedAt,
-                    ).toLocaleDateString()}
-                  </strong>
-                </div>
-              </div>
-            )}
 
             {modal === "edit" && (
               <form onSubmit={submitEdit} className="company-form">

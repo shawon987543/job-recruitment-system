@@ -1,4 +1,3 @@
-import { redirect } from "next/dist/client/components/redirect";
 import toast from "react-hot-toast";
 
 const API_URL =
@@ -41,36 +40,48 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
+/** Share concurrent refreshes, then allow a later token expiry to refresh again. */
+function refreshAccessTokenOnce(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
 /**
  * Get the currently stored access token.
  */
 async function getValidAccessToken(): Promise<string> {
   const token = sessionStorage.getItem("access_token");
 
-  if (!token) {
-    throw new Error("Please log in to continue.");
-  }
-
-  return token;
+  if (token) return token;
+  return handleUnauthorized("");
 }
 
 /**
  * Handle expired access tokens.
  * Multiple simultaneous requests share one refresh request.
  */
-async function handleUnauthorized(): Promise<string> {
-  if (!refreshPromise) {
-    refreshPromise = refreshAccessToken();
+async function handleUnauthorized(failedToken: string): Promise<string> {
+  // Another request may already have refreshed the token while this request
+  // was in flight. Reuse that newer token instead of rotating twice.
+  const currentToken = sessionStorage.getItem("access_token");
+  if (currentToken && currentToken !== failedToken) {
+    return currentToken;
   }
 
-  const newToken = await refreshPromise;
+  const newToken = await refreshAccessTokenOnce();
 
   if (!newToken) {
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("refresh_token");
     sessionStorage.removeItem("user");
 
-    redirect("/login");
+    window.location.assign("/login");
+    throw new Error("Your session has expired. Please log in again.");
   }
 
   return newToken;
@@ -114,7 +125,7 @@ export async function apiRequest(
     let response = await makeRequest(token);
 
     if (response.status === 401) {
-      token = await handleUnauthorized();
+      token = await handleUnauthorized(token);
       response = await makeRequest(token);
     }
 
@@ -157,7 +168,7 @@ export async function apiUpload(
     let response = await makeRequest(token);
 
     if (response.status === 401) {
-      token = await handleUnauthorized();
+      token = await handleUnauthorized(token);
       response = await makeRequest(token);
     }
 

@@ -2,7 +2,6 @@
 "use client";
 import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 
-import { StatsSkeleton } from "@/components/ui/stats-skeleton";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import Skeleton from "@/components/ui/skeleton";
 import { useCallback, useState } from "react";
@@ -21,9 +20,6 @@ import {
   Power,
   X,
   Menu,
-  UserCheck,
-  UserX,
-  ShieldCheck,
   CheckCircle,
   XCircle,
   Mail,
@@ -45,6 +41,11 @@ interface User {
   companyId: number | null;
   createdAt: string;
   updatedAt: string;
+}
+
+interface CompanySummary {
+  id: number;
+  name: string;
 }
 
 interface CompanyAdminRequest {
@@ -93,6 +94,8 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] =
     useState<RoleFilter>("ALL");
+  const [statusFilter, setStatusFilter] =
+    useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [selectedUser, setSelectedUser] =
@@ -263,6 +266,26 @@ export default function UsersPage() {
 
     retry: false,
   });
+
+  const { data: companies = [] } = useQuery<CompanySummary[]>({
+    queryKey: ["companies", "user-directory"],
+    queryFn: async () => {
+      const response = await apiRequest("/companies");
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || "Unable to load company names.");
+      }
+
+      const records = Array.isArray(result) ? result : result.data;
+      return Array.isArray(records)
+        ? records.map((company: CompanySummary) => ({ id: company.id, name: company.name }))
+        : [];
+    },
+    retry: false,
+  });
+
+  const companyNamesById = new Map(companies.map((company) => [company.id, company.name]));
 
   // Load pending Company Admin registration requests
   const {
@@ -640,8 +663,11 @@ export default function UsersPage() {
 
     const matchesRole =
       roleFilter === "ALL" || user.role === roleFilter;
+    const matchesStatus =
+      statusFilter === "ALL" ||
+      (statusFilter === "ACTIVE" ? user.isActive : !user.isActive);
 
-    return matchesSearch && matchesRole;
+    return matchesSearch && matchesRole && matchesStatus;
   });
 
   // Summary counts
@@ -684,7 +710,7 @@ export default function UsersPage() {
     approveMutation.isPending || rejectMutation.isPending;
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme admin-users-theme">
       <AdminSidebar
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
@@ -725,91 +751,6 @@ export default function UsersPage() {
               <span>{success}</span>
               <button onClick={() => setSuccess("")}>
                 <X size={16} />
-              </button>
-            </div>
-          )}
-
-          {/* Welcome section */}
-          <div className="company-welcome">
-            <div>
-              <span>SUPER ADMIN / USERS</span>
-              <h2>Manage platform users</h2>
-              <p>
-                View user accounts, update profile information and
-                control account access from one place.
-              </p>
-            </div>
-
-            <div className="company-welcome-icon">
-              <Users size={55} />
-            </div>
-          </div>
-
-          {/* Summary cards */}
-          {isLoading || isFetching ? (
-            <StatsSkeleton
-              count={4}
-              containerClassName="company-summary-grid"
-              cardClassName="company-summary-card"
-            />
-          ) : (
-            <div className="company-summary-grid">
-              <button
-                className={`company-summary-card ${
-                  roleFilter === "ALL" ? "selected" : ""
-                }`}
-                onClick={() => setRoleFilter("ALL")}
-              >
-                <span className="company-summary-icon blue">
-                  <Users size={21} />
-                </span>
-                <span className="company-summary-label">
-                  Total Users
-                </span>
-                <strong>{counts.total}</strong>
-              </button>
-
-              <button
-                className={`company-summary-card ${
-                  roleFilter === "CANDIDATE" ? "selected" : ""
-                }`}
-                onClick={() => setRoleFilter("CANDIDATE")}
-              >
-                <span className="company-summary-icon green">
-                  <UserCheck size={21} />
-                </span>
-                <span className="company-summary-label">
-                  Candidates
-                </span>
-                <strong>{counts.candidates}</strong>
-              </button>
-
-              <button
-                className={`company-summary-card ${
-                  roleFilter === "COMPANY_ADMIN" ? "selected" : ""
-                }`}
-                onClick={() => setRoleFilter("COMPANY_ADMIN")}
-              >
-                <span className="company-summary-icon orange">
-                  <ShieldCheck size={21} />
-                </span>
-                <span className="company-summary-label">
-                  Company Admins
-                </span>
-                <strong>{counts.companyAdmins}</strong>
-              </button>
-
-              <button
-                className="company-summary-card"
-                onClick={() => setRoleFilter("ALL")}
-              >
-                <span className="company-summary-icon red">
-                  <UserX size={21} />
-                </span>
-                <span className="company-summary-label">
-                  Inactive Users
-                </span>
-                <strong>{counts.inactive}</strong>
               </button>
             </div>
           )}
@@ -975,185 +916,175 @@ export default function UsersPage() {
             </>
           )}
 
-          {/* All users toolbar */}
-          <div className="company-toolbar">
-            <div>
-              <h2>All Users</h2>
-              <p>
-                {filteredUsers.length} of {counts.total} users shown
-              </p>
-            </div>
-
-            <div className="company-search">
-              <Search size={18} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, email or ID..."
-              />
-            </div>
-          </div>
-
-          {/* Role filters */}
-          <div className="company-filter-row">
-            {(
-              [
-                "ALL",
-                "CANDIDATE",
-                "COMPANY_ADMIN",
-                "SUPER_ADMIN",
-              ] as RoleFilter[]
-            ).map((item) => (
-              <button
-                key={item}
-                className={`company-filter ${
-                  roleFilter === item ? "active" : ""
-                }`}
-                onClick={() => setRoleFilter(item)}
-              >
-                {item === "ALL" ? "All Users" : roleLabel(item)}
-              </button>
-            ))}
-          </div>
-
-          {/* All Users table */}
-          <div className="company-table-card">
-            {isLoading || isFetching ? (
-              <TableSkeleton
-                rows={5}
-                columns={6}
-                wrapperClassName="company-table-scroll"
-                tableClassName="company-table"
-              />
-            ) : isUsersError ? (
-              <div className="company-empty">
-                <XCircle size={35} />
-                <h3>Unable to load users</h3>
-                <p>
-                  {usersError instanceof Error
-                    ? usersError.message
-                    : "Please try refreshing the page."}
-                </p>
+          <div className="admin-user-directory">
+            <aside className="admin-user-filter-panel">
+              <div className="admin-user-filter-heading">
+                <h2>Filter users</h2>
                 <button
-                  className="admin-refresh"
-                  onClick={() => loadUsers()}
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setRoleFilter("ALL");
+                    setStatusFilter("ALL");
+                  }}
                 >
-                  Try Again
+                  Reset
                 </button>
               </div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="company-empty">
-                <Users size={35} />
-                <h3>No users found</h3>
-                <p>
-                  Try changing your search or role filter.
-                </p>
+
+              <label className="admin-user-search-label" htmlFor="user-directory-search">
+                Search by name or role
+              </label>
+              <div className="admin-user-search">
+                <Search size={17} />
+                <input
+                  id="user-directory-search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Name, email, or user ID"
+                />
               </div>
-            ) : (
-              <div className="company-table-scroll">
-                <table className="company-table">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Role</th>
-                      <th>Account Status</th>
-                      <th>Company ID</th>
-                      <th>Joined</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
 
-                  <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td>
-                          <div className="company-name-cell">
-                            <div className="company-table-avatar">
-                              {user.name.charAt(0).toUpperCase()}
-                            </div>
-
-                            <div>
-                              <strong>{user.name}</strong>
-                              <span>{user.email}</span>
-                              <span>User ID: #{user.id}</span>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td>
-                          <span
-                            className={`company-status ${
-                              user.role === "SUPER_ADMIN"
-                                ? "approved"
-                                : user.role === "COMPANY_ADMIN"
-                                  ? "pending"
-                                  : "rejected"
-                            }`}
-                          >
-                            {roleLabel(user.role)}
-                          </span>
-                        </td>
-
-                        <td>
-                          <span
-                            className={`company-account-status ${
-                              user.isActive ? "active" : "inactive"
-                            }`}
-                          >
-                            {user.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-
-                        <td>
-                          {user.companyId
-                            ? `#${user.companyId}`
-                            : "—"}
-                        </td>
-
-                        <td>{formatDate(user.createdAt)}</td>
-
-                        <td>
-                          <div className="company-actions">
-                            <button
-                              title="View user details"
-                              onClick={() => openModal("view", user)}
-                            >
-                              <Eye size={16} />
-                            </button>
-
-                            <button
-                              title="Edit user"
-                              onClick={() => openModal("edit", user)}
-                            >
-                              <Pencil size={16} />
-                            </button>
-
-                            {user.role !== "SUPER_ADMIN" && (
-                              <button
-                                className={
-                                  user.isActive ? "reject" : "approve"
-                                }
-                                title={
-                                  user.isActive
-                                    ? "Deactivate user"
-                                    : "Activate user"
-                                }
-                                disabled={statusMutation.isPending}
-                                onClick={() => toggleUserStatus(user)}
-                              >
-                                <Power size={16} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="admin-user-filter-group">
+                <h3>Account type</h3>
+                {(
+                  ["ALL", "CANDIDATE", "COMPANY_ADMIN", "SUPER_ADMIN"] as RoleFilter[]
+                ).map((item) => {
+                  const itemCount = item === "ALL"
+                    ? counts.total
+                    : users.filter((user) => user.role === item).length;
+                  return (
+                    <button
+                      type="button"
+                      key={item}
+                      className={`admin-user-filter-option ${roleFilter === item ? "active" : ""}`}
+                      aria-pressed={roleFilter === item}
+                      onClick={() => setRoleFilter(item)}
+                    >
+                      <span className="admin-user-filter-radio" />
+                      <span>{item === "ALL" ? "All users" : roleLabel(item)}</span>
+                      <small>{itemCount}</small>
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </div>
-        </section>
+
+              <div className="admin-user-filter-group">
+                <h3>Account status</h3>
+                {([
+                  ["ALL", "All accounts", counts.total],
+                  ["ACTIVE", "Active", counts.active],
+                  ["INACTIVE", "Inactive", counts.inactive],
+                ] as const).map(([item, label, itemCount]) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className={`admin-user-filter-option ${statusFilter === item ? "active" : ""}`}
+                    aria-pressed={statusFilter === item}
+                    onClick={() => setStatusFilter(item)}
+                  >
+                    <span className="admin-user-filter-radio" />
+                    <span>{label}</span>
+                    <small>{itemCount}</small>
+                  </button>
+                ))}
+              </div>
+
+              <div className="admin-user-filter-note">
+                <Users size={17} />
+                <div><strong>Platform directory</strong><p>Find candidate and administrator accounts in one place.</p></div>
+              </div>
+            </aside>
+
+            <div className="admin-user-results">
+              <div className="admin-user-results-heading">
+                <div>
+                  <span>PEOPLE DIRECTORY</span>
+                  <h2>Find your next team member</h2>
+                  <p>Browse accounts, review access, and manage user details.</p>
+                </div>
+                <div className="admin-user-results-count"><strong>{filteredUsers.length}</strong><span>users shown</span></div>
+              </div>
+
+              <div className="admin-user-card-grid">
+
+              {isLoading || isFetching ? (
+                [0, 1, 2, 3].map((item) => (
+                  <article className="admin-user-card admin-user-card-skeleton" key={item} aria-hidden="true">
+                    <div className="admin-user-skeleton-top">
+                      <Skeleton variant="circle" width={54} height={54} />
+                      <div><Skeleton variant="text" width={140} height={17} /><Skeleton variant="text" width={175} height={13} /></div>
+                    </div>
+                    <Skeleton variant="text" width="72%" height={13} />
+                    <Skeleton variant="rectangle" width="100%" height={42} />
+                    <Skeleton variant="rectangle" width="100%" height={37} />
+                  </article>
+                ))
+              ) : isUsersError ? (
+                <div className="admin-user-empty">
+                  <XCircle size={32} />
+                  <h3>Unable to load users</h3>
+                  <p>{usersError instanceof Error ? usersError.message : "Please try again."}</p>
+                  <button className="admin-refresh" onClick={() => loadUsers()}>Try Again</button>
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="admin-user-empty">
+                  <Users size={32} />
+                  <h3>No users found</h3>
+                  <p>Try adjusting your search or account filters.</p>
+                </div>
+              ) : (
+                filteredUsers.map((user) => (
+                  <article className="admin-user-card" key={user.id}>
+                    <div className="admin-user-card-head">
+                      <div className="admin-user-identity">
+                        <div className={`admin-user-avatar ${user.role.toLowerCase().replace("_", "-")}`}>
+                          {user.name.trim().charAt(0).toUpperCase() || "U"}
+                        </div>
+                        <div className="admin-user-identity-copy">
+                          <h3>{user.name}</h3>
+                          <p>{user.email}</p>
+                        </div>
+                      </div>
+                      <span className={`admin-user-role ${user.role.toLowerCase().replace("_", "-")}`}>
+                        {roleLabel(user.role)}
+                      </span>
+                    </div>
+
+                    <div className="admin-user-state-row">
+                      <span className={`admin-user-state ${user.isActive ? "active" : "inactive"}`}>
+                        <i />{user.isActive ? "Active account" : "Inactive account"}
+                      </span>
+                      <span>User #{user.id}</span>
+                    </div>
+
+                    <div className="admin-user-facts">
+                      <div><span>Company</span><strong>{user.companyId ? (companyNamesById.get(user.companyId) ?? `#${user.companyId}`) : "—"}</strong></div>
+                      <div><span>Joined</span><strong>{formatDate(user.createdAt)}</strong></div>
+                    </div>
+
+                    <div className="admin-user-card-actions">
+                      <button type="button" className="admin-user-view-action" onClick={() => openModal("view", user)}><Eye size={15} />View details</button>
+                      <button type="button" className="admin-user-edit-action" onClick={() => openModal("edit", user)} aria-label={`Edit ${user.name}`}><Pencil size={15} /></button>
+                      {user.role !== "SUPER_ADMIN" && (
+                        <button
+                          type="button"
+                          className={`admin-user-toggle-action ${user.isActive ? "deactivate" : "activate"}`}
+                          title={user.isActive ? "Deactivate user" : "Activate user"}
+                          aria-label={user.isActive ? `Deactivate ${user.name}` : `Activate ${user.name}`}
+                          disabled={statusMutation.isPending}
+                          onClick={() => toggleUserStatus(user)}
+                        >
+                          <Power size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                ))
+              )}
+              </div>
+            </div>
+          </div>        </section>
       </main>
 
       {/* User details / edit modal */}
@@ -1238,7 +1169,7 @@ export default function UsersPage() {
                       <span>Company ID</span>
                       <strong>
                         {(userDetails ?? selectedUser).companyId
-                          ? `#${(userDetails ?? selectedUser).companyId}`
+                          ? (companyNamesById.get((userDetails ?? selectedUser).companyId!) ?? `#${(userDetails ?? selectedUser).companyId}`)
                           : "Not assigned"}
                       </strong>
                     </div>

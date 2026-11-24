@@ -230,7 +230,7 @@ export default function CompanyAdminsContent({
       .join('');
 
   return (
-    <div className="w-full min-w-0 pb-8">
+    <div className="admin-company-admins-theme w-full min-w-0 pb-8">
     <div className="w-full min-w-0 space-y-6">
 
         {/* Header */}

@@ -84,8 +84,12 @@ function formatDate(date: string) {
 function formatSalary(min: number | null, max: number | null) {
   if (min == null && max == null) return "Negotiable";
 
-  const format = (value: number) =>
-    `৳${value.toLocaleString("en-BD")}`;
+  const currency = new Intl.NumberFormat("en-BD", {
+    style: "currency",
+    currency: "BDT",
+    maximumFractionDigits: 0,
+  });
+  const format = (value: number) => currency.format(value);
 
   if (min != null && max != null) {
     return `${format(min)} - ${format(max)}`;
@@ -95,7 +99,6 @@ function formatSalary(min: number | null, max: number | null) {
 
   return `Up to ${format(max!)}`;
 }
-
 /* Job status class */
 function statusClass(status: JobStatus) {
   return {

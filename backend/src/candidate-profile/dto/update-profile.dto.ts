@@ -6,7 +6,9 @@ import {
   MaxLength,
   ArrayMaxSize,
   IsPhoneNumber,
+  IsUrl,
 } from 'class-validator';
+
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -32,4 +34,14 @@ export class UpdateProfileDto {
   @ArrayMaxSize(50)
   @IsString({ each: true })
   skills?: string[];
+
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(1000)
+  resumeUrl?: string;
+
+  @IsOptional()
+  @IsUrl()
+  @MaxLength(1000)
+  profilePictureUrl?: string;
 }

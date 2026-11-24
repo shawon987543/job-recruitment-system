@@ -1,4 +1,5 @@
 import AdminPageClient from "./admin-page-client";
+import "./admin-home-theme.css";
 
 type AdminPageProps = {
   searchParams: Promise<{

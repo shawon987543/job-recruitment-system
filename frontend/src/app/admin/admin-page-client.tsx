@@ -86,13 +86,13 @@ function DonutChart({
           .join(", ")})`;
 
   return (
-    <div className="admin-detail-card">
+    <div className="admin-detail-card admin-chart-card">
       <h3>{title}</h3>
 
-      <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-5">
+      <div className="admin-chart-layout flex flex-col sm:flex-row items-center justify-around gap-6 py-5">
         {/* Donut Chart */}
         <div
-          className="relative shrink-0 rounded-full"
+          className="admin-chart-donut relative shrink-0 rounded-full"
           style={{
             width: "170px",
             height: "170px",
@@ -100,7 +100,7 @@ function DonutChart({
           }}
         >
           <div
-            className="absolute rounded-full bg-white flex flex-col items-center justify-center"
+            className="admin-chart-center absolute rounded-full bg-white flex flex-col items-center justify-center"
             style={{ inset: "25px" }}
           >
             <strong className="text-2xl font-bold text-slate-800">
@@ -114,7 +114,7 @@ function DonutChart({
         </div>
 
         {/* Chart Legend */}
-        <div className="flex flex-col gap-3 w-full">
+        <div className="admin-chart-legend flex flex-col gap-3 w-full">
           {segments.map((segment) => (
             <div
               key={segment.label}
@@ -323,7 +323,7 @@ function AdminPageContent({
 
   // Keep the page shell and skeleton visible during authentication.
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-home-theme">
       {/* Admin Sidebar */}
       <AdminSidebar
         menuOpen={menuOpen}
@@ -394,80 +394,49 @@ function AdminPageContent({
                   </p>
                 </div>
 
-                <div className="admin-welcome-decoration">
+                <div className="admin-welcome-decoration" aria-hidden="true">
                   CH
                 </div>
               </div>
 
               {/* Users & Applications Analytics */}
               {stats && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                  {/* Users Distribution */}
-                  <DonutChart
-                    title="Users Distribution"
-                    segments={[
-                      {
-                        label: "Candidates",
-                        value: stats.users.candidates,
-                        color: "#3b82f6",
-                      },
-                      {
-                        label: "Company Admins",
-                        value: stats.users.companyAdmins,
-                        color: "#8b5cf6",
-                      },
-                      {
-                        label: "Super Admins",
-                        value: stats.users.superAdmins,
-                        color: "#f59e0b",
-                      },
-                    ]}
-                  />
-
-                  {/* Applications Distribution */}
-                  <DonutChart
-                    title="Applications Distribution"
-                    segments={[
-                      {
-                        label: "Pending",
-                        value: stats.applications.pending,
-                        color: "#f59e0b",
-                      },
-                      {
-                        label: "Shortlisted",
-                        value: stats.applications.shortlisted,
-                        color: "#3b82f6",
-                      },
-                      {
-                        label: "Interview",
-                        value: stats.applications.interview,
-                        color: "#8b5cf6",
-                      },
-                      {
-                        label: "Selected",
-                        value: stats.applications.selected,
-                        color: "#10b981",
-                      },
-                      {
-                        label: "Rejected",
-                        value: stats.applications.rejected,
-                        color: "#ef4444",
-                      },
-                      {
-                        label: "Withdrawn",
-                        value: stats.applications.withdrawn,
-                        color: "#64748b",
-                      },
-                    ]}
-                  />
-                </div>
+                <>
+                  <div className="admin-section-heading admin-section-heading-spaced">
+                    <div>
+                      <h2>Platform Insights</h2>
+                      <p>Distribution of users and application outcomes</p>
+                    </div>
+                  </div>
+                  <div className="admin-chart-grid admin-chart-grid-top">
+                    <DonutChart
+                      title="Users Distribution"
+                      segments={[
+                        { label: "Candidates", value: stats.users.candidates, color: "#2d998c" },
+                        { label: "Company Admins", value: stats.users.companyAdmins, color: "#8dcfc5" },
+                        { label: "Super Admins", value: stats.users.superAdmins, color: "#d5a34d" },
+                      ]}
+                    />
+                    <DonutChart
+                      title="Applications Distribution"
+                      segments={[
+                        { label: "Pending", value: stats.applications.pending, color: "#d5a34d" },
+                        { label: "Shortlisted", value: stats.applications.shortlisted, color: "#2d998c" },
+                        { label: "Interview", value: stats.applications.interview, color: "#8dcfc5" },
+                        { label: "Selected", value: stats.applications.selected, color: "#247d72" },
+                        { label: "Rejected", value: stats.applications.rejected, color: "#ef7770" },
+                        { label: "Withdrawn", value: stats.applications.withdrawn, color: "#9aa6a2" },
+                      ]}
+                    />
+                  </div>
+                </>
               )}
 
               {/* Platform Statistics Heading */}
               <div className="admin-section-heading">
                 <div>
                   <h2>Platform Statistics</h2>
-                  <p>Overview of your platform activity</p>
+                  <p>Key activity across users, companies, jobs, and applications</p>
                 </div>
               </div>
 

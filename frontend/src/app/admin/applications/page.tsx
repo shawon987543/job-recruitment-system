@@ -690,7 +690,7 @@ export default function ApplicationsPage() {
   // =====================================================
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme admin-applications-theme">
       <AdminSidebar
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}

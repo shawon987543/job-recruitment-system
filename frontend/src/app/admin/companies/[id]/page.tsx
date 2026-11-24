@@ -251,6 +251,7 @@ function InfoItem({
 }: InfoItemProps) {
   return (
     <div
+      className="company-detail-info"
       style={{
         display: "flex",
         gap: 13,
@@ -260,6 +261,7 @@ function InfoItem({
       }}
     >
       <div
+        className="company-detail-info-icon"
         style={{
           width: 38,
           height: 38,
@@ -277,6 +279,7 @@ function InfoItem({
 
       <div style={{ minWidth: 0 }}>
         <p
+          className="company-detail-info-label"
           style={{
             margin: 0,
             fontSize: 12,
@@ -288,6 +291,7 @@ function InfoItem({
         </p>
 
         <div
+          className="company-detail-info-value"
           style={{
             marginTop: 5,
             fontSize: 14,
@@ -490,26 +494,26 @@ export default function CompanyDetailsPage() {
     switch (status) {
       case "APPROVED":
         return {
-          background: "#dcfce7",
-          color: "#166534",
+          background: "#e4f4ed",
+          color: "#247d65",
         };
 
       case "REJECTED":
         return {
-          background: "#fee2e2",
-          color: "#991b1b",
+          background: "#fff0ed",
+          color: "#ae4c48",
         };
 
       default:
         return {
-          background: "#fef3c7",
-          color: "#92400e",
+          background: "#fff4d9",
+          color: "#9b6500",
         };
     }
   };
 
   return (
-    <div className="admin-layout">
+    <div className="admin-layout admin-pages-theme admin-company-details-theme">
       <AdminSidebar
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
@@ -526,7 +530,7 @@ export default function CompanyDetailsPage() {
           </button>
 
           <div>
-            <h2 style={{ margin: 0 }}>Company Details</h2>
+            <h1 style={{ margin: 0 }}>Company Details</h1>
 
             <p
               style={{
@@ -540,8 +544,9 @@ export default function CompanyDetailsPage() {
           </div>
         </header>
 
-        <section className="admin-content">
+        <section className="admin-content company-detail-content">
           <button
+            className="company-detail-back"
             type="button"
             onClick={() => router.push("/admin/companies")}
             style={{
@@ -619,6 +624,7 @@ export default function CompanyDetailsPage() {
             <>
               {/* Company header */}
               <div
+                className="company-detail-hero"
                 style={{
                   background: "#fff",
                   border: "1px solid #e8edf3",
@@ -641,6 +647,7 @@ export default function CompanyDetailsPage() {
                   }}
                 >
                   <div
+                    className="company-detail-mark"
                     style={{
                       width: 65,
                       height: 65,
@@ -657,6 +664,7 @@ export default function CompanyDetailsPage() {
 
                   <div>
                     <h1
+                      className="company-detail-name"
                       style={{
                         margin: 0,
                         fontSize: 24,
@@ -666,7 +674,7 @@ export default function CompanyDetailsPage() {
                       {company.name}
                     </h1>
 
-                    <p
+                    <p className="company-detail-id"
                       style={{
                         margin: "6px 0 0",
                         color: "#64748b",
@@ -679,6 +687,7 @@ export default function CompanyDetailsPage() {
                 </div>
 
                 <div
+                  className="company-detail-badges"
                   style={{
                     display: "flex",
                     gap: 9,
@@ -687,6 +696,7 @@ export default function CompanyDetailsPage() {
                   }}
                 >
                   <span
+                    className={`company-detail-status ${company.status.toLowerCase()}`}
                     style={{
                       ...statusStyle(company.status),
                       padding: "7px 13px",
@@ -699,6 +709,7 @@ export default function CompanyDetailsPage() {
                   </span>
 
                   <span
+                    className={`company-detail-account ${company.isActive ? "active" : "inactive"}`}
                     style={{
                       background: company.isActive
                         ? "#dcfce7"
@@ -715,34 +726,12 @@ export default function CompanyDetailsPage() {
                     {company.isActive ? "ACTIVE" : "INACTIVE"}
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => refetch()}
-                    disabled={isFetching}
-                    title="Refresh details"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 7,
-                      padding: "9px 12px",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 8,
-                      background: "#fff",
-                      color: "#334155",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <RefreshCw
-                      size={15}
-                      className={isFetching ? "animate-spin" : ""}
-                    />
-                    Refresh
-                  </button>
                 </div>
               </div>
 
               {/* Main information grid */}
               <div
+                className="company-detail-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns:
@@ -753,6 +742,7 @@ export default function CompanyDetailsPage() {
               >
                 {/* Company information */}
                 <div
+                  className="company-detail-card"
                   style={{
                     background: "#fff",
                     border: "1px solid #e8edf3",
@@ -761,6 +751,7 @@ export default function CompanyDetailsPage() {
                   }}
                 >
                   <h2
+                    className="company-detail-card-title"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -770,7 +761,7 @@ export default function CompanyDetailsPage() {
                       color: "#0f172a",
                     }}
                   >
-                    <Building2 size={20} color="#2563eb" />
+                    <Building2 size={20} />
                     Company Information
                   </h2>
 
@@ -799,7 +790,7 @@ export default function CompanyDetailsPage() {
                           }
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: "#2563eb" }}
+                          className="company-detail-link"
                         >
                           {company.website}
                         </a>
@@ -824,6 +815,7 @@ export default function CompanyDetailsPage() {
 
                 {/* Contact information */}
                 <div
+                  className="company-detail-card"
                   style={{
                     background: "#fff",
                     border: "1px solid #e8edf3",
@@ -832,6 +824,7 @@ export default function CompanyDetailsPage() {
                   }}
                 >
                   <h2
+                    className="company-detail-card-title"
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -841,7 +834,7 @@ export default function CompanyDetailsPage() {
                       color: "#0f172a",
                     }}
                   >
-                    <UserRound size={20} color="#2563eb" />
+                    <UserRound size={20} />
                     Contact Information
                   </h2>
 
@@ -885,6 +878,7 @@ export default function CompanyDetailsPage() {
 
               {/* Approval information */}
               <div
+                className="company-detail-card company-detail-approval"
                 style={{
                   background: "#fff",
                   border: "1px solid #e8edf3",
@@ -894,6 +888,7 @@ export default function CompanyDetailsPage() {
                 }}
               >
                 <h2
+                  className="company-detail-card-title"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -903,11 +898,12 @@ export default function CompanyDetailsPage() {
                     color: "#0f172a",
                   }}
                 >
-                  <ShieldCheck size={20} color="#2563eb" />
+                  <ShieldCheck size={20} />
                   Approval & Account Information
                 </h2>
 
                 <div
+                  className="company-detail-metrics"
                   style={{
                     display: "grid",
                     gridTemplateColumns:
@@ -915,7 +911,7 @@ export default function CompanyDetailsPage() {
                     gap: 15,
                   }}
                 >
-                  <div
+                  <div className="company-detail-metric"
                     style={{
                       padding: 15,
                       background: "#f8fafc",
@@ -943,7 +939,7 @@ export default function CompanyDetailsPage() {
                     </strong>
                   </div>
 
-                  <div
+                  <div className="company-detail-metric"
                     style={{
                       padding: 15,
                       background: "#f8fafc",
@@ -973,7 +969,7 @@ export default function CompanyDetailsPage() {
                     </strong>
                   </div>
 
-                  <div
+                  <div className="company-detail-metric"
                     style={{
                       padding: 15,
                       background: "#f8fafc",
@@ -1001,7 +997,7 @@ export default function CompanyDetailsPage() {
                     </strong>
                   </div>
 
-                  <div
+                  <div className="company-detail-metric"
                     style={{
                       padding: 15,
                       background: "#f8fafc",
@@ -1033,6 +1029,7 @@ export default function CompanyDetailsPage() {
 
                 {company.rejectionReason && (
                   <div
+                    className="company-detail-rejection"
                     style={{
                       marginTop: 18,
                       padding: 15,
@@ -1065,6 +1062,7 @@ export default function CompanyDetailsPage() {
 
               {/* Assigned company admins */}
               <div
+                className="company-detail-card company-detail-admins"
                 style={{
                   background: "#fff",
                   border: "1px solid #e8edf3",
@@ -1084,7 +1082,7 @@ export default function CompanyDetailsPage() {
                   }}
                 >
                   <div>
-                    <h2
+                    <h2 className="company-detail-card-title"
                       style={{
                         margin: 0,
                         fontSize: 17,
@@ -1106,6 +1104,7 @@ export default function CompanyDetailsPage() {
                   </div>
 
                   <span
+                    className="company-detail-admin-count"
                     style={{
                       padding: "7px 12px",
                       background: "#eff6ff",
@@ -1121,7 +1120,7 @@ export default function CompanyDetailsPage() {
 
                 {!company.admins ||
                 company.admins.length === 0 ? (
-                  <div
+                  <div className="company-detail-empty"
                     style={{
                       padding: 30,
                       textAlign: "center",
@@ -1141,7 +1140,7 @@ export default function CompanyDetailsPage() {
                   </div>
                 ) : (
                   <div style={{ overflowX: "auto" }}>
-                    <table
+                    <table className="company-detail-admin-table"
                       style={{
                         width: "100%",
                         borderCollapse: "collapse",

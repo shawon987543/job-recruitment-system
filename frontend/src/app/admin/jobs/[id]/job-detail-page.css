@@ -1,0 +1,172 @@
+.admin-job-page {
+  min-height: 100vh;
+  background: #f3f8f7;
+}
+
+.admin-job-page .admin-topbar {
+  min-height: 88px;
+}
+
+.admin-job-page-back-top,
+.admin-job-page-hero-back {
+  display: inline-flex;
+  min-height: 39px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 13px;
+  border: 1px solid #dfeae7;
+  border-radius: 9px;
+  background: #fff;
+  color: #207f74;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.admin-job-page-back-top:hover {
+  border-color: #b7d9d2;
+  background: #f1f8f6;
+}
+
+.admin-job-page-content {
+  width: min(100%, 1500px);
+  margin: 0 auto;
+  padding: 30px 36px 48px;
+}
+
+.admin-job-page-hero {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 17px;
+  box-shadow: 0 12px 30px rgba(20, 52, 47, .12);
+}
+
+.admin-job-page-hero-back {
+  min-height: 34px;
+  padding: 0 10px;
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: #e8f4f1;
+  font-size: 10px;
+}
+
+.admin-job-page-hero-back:hover {
+  background: rgba(255,255,255,.16);
+}
+
+.admin-job-page-layout {
+  padding: 21px 0 0;
+}
+
+.admin-job-page-layout .admin-job-detail-card,
+.admin-job-page-layout .admin-job-detail-overview,
+.admin-job-page-layout .admin-job-detail-actions,
+.admin-job-page-layout .admin-job-detail-meta {
+  box-shadow: 0 8px 24px rgba(27, 69, 62, .045);
+}
+
+.admin-job-page-edit-link {
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.admin-job-page-notice,
+.admin-job-page-error {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.admin-job-page-notice.success {
+  border-color: #cce9dd;
+  background: #effaf4;
+  color: #287452;
+}
+
+.admin-job-page-error {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-color: #f1d5d2;
+  background: #fff7f6;
+  color: #a63d35;
+}
+
+.admin-job-page-error p {
+  margin: 0 auto 0 0;
+}
+
+.admin-job-page-error button,
+.admin-job-page-error a {
+  border: 0;
+  background: transparent;
+  color: #8d342e;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.admin-job-page-loading {
+  display: grid;
+  gap: 20px;
+}
+
+.admin-job-page-loading > div:last-child {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .admin-job-page-content {
+    padding: 24px 24px 38px;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-job-page .admin-topbar {
+    min-height: 78px;
+    padding: 15px 18px;
+  }
+
+  .admin-job-page-content {
+    padding: 20px 17px 30px;
+  }
+
+  .admin-job-page-layout {
+    padding-top: 14px;
+  }
+
+  .admin-job-page-loading > div:last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-job-page .admin-topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .admin-job-page-back-top {
+    min-height: 34px;
+    margin-left: auto;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
+  .admin-job-page-content {
+    padding: 15px 13px 25px;
+  }
+
+  .admin-job-page-hero {
+    border-radius: 13px;
+  }
+}

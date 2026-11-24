@@ -13,6 +13,9 @@ import {
   FileText,
   XCircle,
   ArrowRight,
+  LayoutDashboard,
+  UserRound,
+  ArrowUpRight,
   Building2,
   Search,
   CheckCircle2,
@@ -438,25 +441,43 @@ export default function MyApplicationsPage() {
 
   return (
     <main className="my-applications-page">
+      <header className="applications-header">
+        <Link href="/candidate" className="applications-brand">
+          <span><BriefcaseBusiness size={19} /></span>
+          CareerHub
+        </Link>
+
+        <nav className="applications-navigation" aria-label="Candidate navigation">
+          <Link href="/candidate"><LayoutDashboard size={15} />Dashboard</Link>
+          <Link href="/candidate/jobs"><Search size={15} />Browse jobs</Link>
+          <Link href="/candidate/applications" aria-current="page"><FileText size={15} />My applications</Link>
+        </nav>
+
+        <Link href="/candidate/profile" className="applications-profile-link">
+          <UserRound size={15} />
+          My profile
+        </Link>
+      </header>
+
       <div className="applications-container">
         <div className="applications-heading">
           <div>
             <div className="applications-eyebrow">
-              <BriefcaseBusiness size={16} />
-              Candidate Portal
+              <span className="applications-eyebrow-line" />
+              CANDIDATE WORKSPACE / APPLICATIONS
             </div>
 
-            <h1>My Applications</h1>
+            <h1>Track your applications</h1>
 
             <p>
-              Track your job applications and stay updated on your recruitment
-              progress.
+              Stay up to date with your job search and follow every opportunity
+              from application to outcome.
             </p>
           </div>
 
           <Link href="/candidate/jobs" className="browse-jobs-button">
             <Search size={17} />
-            Browse Jobs
+            Find more jobs
           </Link>
         </div>
 
@@ -505,7 +526,7 @@ export default function MyApplicationsPage() {
         <section className="applications-content">
           <div className="applications-toolbar">
             <div>
-              <h2>Your Applications</h2>
+              <h2>Application activity</h2>
               {loading ? (
                 <Skeleton variant="text" width={170} height={13} />
               ) : (
@@ -522,6 +543,7 @@ export default function MyApplicationsPage() {
           <div className="applications-search">
             <Search size={18} />
             <input
+              aria-label="Search applications"
               type="text"
               placeholder="Search by job title or location..."
               value={searchTerm}
@@ -613,6 +635,14 @@ export default function MyApplicationsPage() {
             </div>
           )}
         </section>
+
+        <footer className="applications-footer">
+          <Link href="/candidate" className="applications-footer-brand">
+            <BriefcaseBusiness size={16} /> CareerHub
+          </Link>
+          <span>Build your future, one opportunity at a time.</span>
+          <Link href="/candidate/jobs">Explore open roles <ArrowUpRight size={14} /></Link>
+        </footer>
       </div>
     </main>
   );

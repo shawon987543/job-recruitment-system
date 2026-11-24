@@ -8,14 +8,15 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
+  Clock3,
   MapPin,
   Search,
   SlidersHorizontal,
   X,
   Building2,
+  Wallet,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
-import RichTextContent from "@/components/ui/rich-text-content";
 import Skeleton from "@/components/ui/skeleton";
 import "./jobs.css";
 
@@ -89,6 +90,22 @@ function formatDate(date: string | null) {
     month: "short",
     year: "numeric",
   });
+}
+
+function formatPostedTime(date: string) {
+  const postedAt = new Date(date).getTime();
+  if (Number.isNaN(postedAt)) return "Recently posted";
+
+  const minutes = Math.max(0, Math.floor((Date.now() - postedAt) / 60_000));
+  if (minutes < 60) return `${minutes} min ago`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hr${hours === 1 ? "" : "s"} ago`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days === 1 ? "" : "s"} ago`;
+
+  return formatDate(date);
 }
 
 function JobResultsSkeleton() {
@@ -166,7 +183,7 @@ export default function BrowseJobsPage() {
         setLoading(false);
       }
     },
-    []
+    [setError]
   );
 
   // Load jobs and read any initial title from the URL.
@@ -201,125 +218,121 @@ export default function BrowseJobsPage() {
   return (
     <main className="browse-page">
       <header className="browse-header">
-        <Link href="/candidate" className="browse-back">
-          <ArrowLeft size={18} />
-          Dashboard
+        <Link href="/candidate" className="browse-brand">
+          <span className="browse-brand-icon"><BriefcaseBusiness size={19} /></span>
+          <span>CareerHub</span>
         </Link>
 
+        <nav className="browse-navigation" aria-label="Candidate navigation">
+          <Link href="/candidate">Dashboard</Link>
+          <Link href="/candidate/jobs" aria-current="page">Browse Jobs</Link>
+          <Link href="/candidate/applications">My Applications</Link>
+        </nav>
+
         <div className="browse-header-right">
-          <span className="browse-header-label">
-            <BriefcaseBusiness size={17} />
-            CareerHub
-          </span>
+          <Link href="/candidate/profile" className="browse-profile-link">My Profile</Link>
         </div>
       </header>
 
       <section className="browse-hero">
         <div className="browse-hero-content">
-          <span className="browse-eyebrow">
-            YOUR NEXT OPPORTUNITY STARTS HERE
-          </span>
-
-          <h1>Find a job that moves you forward.</h1>
-
-          <p>
-            Explore opportunities from approved companies and discover
-            the next step in your career.
-          </p>
+          <span className="browse-eyebrow">CAREERHUB / OPPORTUNITIES</span>
+          <h1>Find your next opportunity</h1>
+          <p>Discover roles from approved companies and take the next step in your career.</p>
         </div>
-
         <div className="browse-hero-icon">
           <BriefcaseBusiness size={76} strokeWidth={1.2} />
         </div>
       </section>
 
-      <section className="browse-search-section">
-        <form className="browse-filter-form" onSubmit={handleSearch}>
-          <div className="browse-filter-title">
-            <SlidersHorizontal size={19} />
-            <h2>Find your opportunity</h2>
-          </div>
+      <div className="browse-content-grid">
+        <aside className="browse-search-section">
+          <form className="browse-filter-form" onSubmit={handleSearch}>
+            <div className="browse-filter-title">
+              <span><SlidersHorizontal size={17} /></span>
+              <h2>Refine your search</h2>
+            </div>
 
-          <div className="browse-filter-grid">
-            <div className="browse-input-group">
-              <label htmlFor="job-title">Job title or keyword</label>
+            <div className="browse-filter-grid">
+              <div className="browse-input-group">
+                <label htmlFor="job-title">Job title or keyword</label>
+                <div className="browse-input-wrapper">
+                  <Search size={18} />
+                  <input
+                    id="job-title"
+                    type="text"
+                    placeholder="e.g. Frontend Developer"
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                </div>
+              </div>
 
-              <div className="browse-input-wrapper">
-                <Search size={19} />
+              <div className="browse-input-group">
+                <label htmlFor="job-location">Location</label>
+                <div className="browse-input-wrapper">
+                  <MapPin size={18} />
+                  <input
+                    id="job-location"
+                    type="text"
+                    placeholder="e.g. Dhaka"
+                    value={location}
+                    onChange={(event) => setLocation(event.target.value)}
+                  />
+                </div>
+              </div>
 
-                <input
-                  id="job-title"
-                  type="text"
-                  placeholder="e.g. Frontend Developer"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                />
+              <div className="browse-input-group">
+                <label htmlFor="job-type">Job type</label>
+                <select
+                  id="job-type"
+                  value={jobType}
+                  onChange={(event) => setJobType(event.target.value)}
+                >
+                  <option value="">All job types</option>
+                  {jobTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {formatJobType(type)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="browse-filter-actions">
+                <button
+                  type="submit"
+                  className="browse-search-button"
+                  disabled={loading}
+                >
+                  <Search size={17} />
+                  Search jobs
+                </button>
+                <button
+                  type="button"
+                  className="browse-clear-button"
+                  onClick={clearFilters}
+                >
+                  <X size={16} />
+                  Clear filters
+                </button>
               </div>
             </div>
+          </form>
 
-            <div className="browse-input-group">
-              <label htmlFor="job-location">Location</label>
+          <section className="browse-aside-card">
+            <span className="browse-aside-icon"><BriefcaseBusiness size={19} /></span>
+            <h2>Make your next move</h2>
+            <p>A complete profile helps employers learn more about your experience and skills.</p>
+            <Link href="/candidate/profile">Update your profile <ArrowLeft size={15} /></Link>
+          </section>
+        </aside>
 
-              <div className="browse-input-wrapper">
-                <MapPin size={19} />
-
-                <input
-                  id="job-location"
-                  type="text"
-                  placeholder="e.g. Dhaka"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="browse-input-group">
-              <label htmlFor="job-type">Job type</label>
-
-              <select
-                id="job-type"
-                value={jobType}
-                onChange={(event) => setJobType(event.target.value)}
-              >
-                <option value="">All job types</option>
-
-                {jobTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {formatJobType(type)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="browse-filter-actions">
-              <button
-                type="submit"
-                className="browse-search-button"
-                disabled={loading}
-              >
-                <Search size={18} />
-                Search Jobs
-              </button>
-
-              <button
-                type="button"
-                className="browse-clear-button"
-                onClick={clearFilters}
-              >
-                <X size={16} />
-                Clear
-              </button>
-            </div>
-          </div>
-        </form>
-      </section>
-
-      <section className="browse-results-section">
+        <section className="browse-results-section">
         <div className="browse-results-heading">
           <div>
             <span className="browse-section-label">OPPORTUNITIES</span>
-            <h2>Available Jobs</h2>
-            <p>Explore the latest published job opportunities.</p>
+            <h2>Available jobs</h2>
+            <p>Explore current openings from companies on CareerHub.</p>
           </div>
 
           {!loading && !error && (
@@ -364,69 +377,69 @@ export default function BrowseJobsPage() {
           <div className="browse-job-list">
             {jobs.map((job) => (
               <article className="browse-job-card" key={job.id}>
+                <div className="browse-job-posted"><Clock3 size={13} />{formatPostedTime(job.createdAt)}</div>
                 <div className="browse-job-main">
                   <div className="browse-company-icon">
                     <Building2 size={25} />
                   </div>
 
                   <div className="browse-job-information">
-                    <span className="browse-job-type">
-                      {formatJobType(job.jobType)}
-                    </span>
-
                     <h3>{job.title}</h3>
-
                     <p className="browse-company-name">
                       {job.companyName || "Company"}
                     </p>
-                    {job.description && (
-                      <RichTextContent
-                        html={job.description}
-                        className="browse-job-description"
-                      />
-                    )}
 
                     <div className="browse-job-meta">
-                      <span>
-                        <MapPin size={15} />
-                        {job.location || "Location not specified"}
-                      </span>
-
-                      <span>
-                        <BriefcaseBusiness size={15} />
-                        {formatJobType(job.jobType)}
-                      </span>
-
-                      <span>
-                        <CalendarDays size={15} />
-                        Deadline: {formatDate(job.deadline)}
-                      </span>
+                      <span><BriefcaseBusiness size={16} />{formatJobType(job.jobType)}</span>
+                      <span><Wallet size={16} />{formatSalary(job)}</span>
+                      <span><MapPin size={16} />{job.location || "Location not specified"}</span>
+                      {job.deadline && (
+                        <span className="browse-job-deadline"><CalendarDays size={15} />Apply by {formatDate(job.deadline)}</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="browse-job-side">
-                  <strong>{formatSalary(job)}</strong>
-
-                  <span className="browse-salary-label">
-                    Salary offered
-                  </span>
-
                   <Link
                     href={`/candidate/jobs/${job.id}`}
                     className="browse-details-button"
                   >
-                    View Details
+                    View details
                   </Link>
                 </div>
               </article>
             ))}
           </div>
         )}
-      </section>
+        </section>
+      </div>
 
       <footer className="browse-footer">
-        <p>© {new Date().getFullYear()} CareerHub. Build your future.</p>
+        <div className="browse-footer-main">
+          <div className="browse-footer-brand">
+            <Link href="/candidate" className="browse-brand">
+              <span className="browse-brand-icon"><BriefcaseBusiness size={19} /></span>
+              <span>CareerHub</span>
+            </Link>
+            <p>Connecting people with opportunities to build the future they want.</p>
+          </div>
+          <div className="browse-footer-links">
+            <h2>For candidates</h2>
+            <Link href="/candidate/jobs">Browse jobs</Link>
+            <Link href="/candidate/applications">My applications</Link>
+            <Link href="/candidate/profile">My profile</Link>
+          </div>
+          <div className="browse-footer-links">
+            <h2>Your account</h2>
+            <Link href="/candidate">Dashboard</Link>
+            <Link href="/candidate/profile">Profile settings</Link>
+          </div>
+        </div>
+        <div className="browse-footer-bottom">
+          <p>© {new Date().getFullYear()} CareerHub. All rights reserved.</p>
+          <span>Build your future, one opportunity at a time.</span>
+        </div>
       </footer>
     </main>
   );

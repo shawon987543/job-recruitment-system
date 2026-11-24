@@ -8,7 +8,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowRight,
-  Bell,
   BriefcaseBusiness,
   FileText,
   LayoutDashboard,
@@ -229,14 +228,6 @@ export default function CandidateDashboard() {
           </div>
 
           <div className="candidate-topbar-right">
-            <button
-              className="candidate-icon-button"
-              aria-label="Notifications"
-              title="Notifications"
-            >
-              <Bell size={19} />
-            </button>
-
             <div className="candidate-user-info">
               <div className="candidate-avatar">
                 {profilePictureUrl ? (
@@ -267,12 +258,13 @@ export default function CandidateDashboard() {
               </span>
 
               <h1>
-                Hello, {firstName}! <span>👋</span>
+                Hello, {firstName}!
               </h1>
 
               <p>
-                Find the right opportunity, showcase your skills, and take
-                the next step toward your dream career.
+                Your next opportunity starts with one good search. Explore
+                roles, keep your profile ready, and take the next step in
+                your career.
               </p>
 
               <form className="candidate-search-form" onSubmit={handleSearch}>
@@ -366,7 +358,6 @@ export default function CandidateDashboard() {
               )}
 
               {/* Removed the old Education & Experience dashboard card. */}
-              
             </div>
           </section>
 

@@ -271,7 +271,7 @@ export default function AdminSettingsPage() {
 
   if (pageLoading) {
     return (
-      <div className="admin-layout admin-settings-page">
+      <div className="admin-layout admin-pages-theme admin-settings-page">
         <AdminSidebar menuOpen={menuOpen} setMenuOpen={setMenuOpen} />
         <main className="admin-main">
           <header className="admin-topbar admin-settings-topbar">
@@ -315,7 +315,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="admin-layout admin-settings-page">
+    <div className="admin-layout admin-pages-theme admin-settings-page">
       <AdminSidebar
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
