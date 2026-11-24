@@ -107,13 +107,12 @@ export class CandidateProfileController {
 
   // Upload resume/upload-signature
   @Post('resume/upload-signature')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.CANDIDATE)
-  generateResumeUploadSignature(){
-    return this.CloudinaryService.generateUploadSignature(
-      'cadidate/resumes',
-    )
-  }
+  generateResumeUploadSignature() {
+  return this.CloudinaryService.generateUploadSignature(
+    'candidates/resumes',
+    'raw',
+  );
+}
 
   // Upload profile picture to Cloudinary
   @Post('profile-picture')
@@ -162,13 +161,12 @@ export class CandidateProfileController {
   // profile-picture/upload-signature
 
   @Post('profile-picture/upload-signature')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.CANDIDATE)
-  generateProfilePictureUploadSignature(){
-    return this.CloudinaryService.generateUploadSignature(
-      'candidate/profiles'
-    );
-  }
+  generateProfilePictureUploadSignature() {
+  return this.CloudinaryService.generateUploadSignature(
+    'candidate/profiles',
+    'image',
+  );
+}
 
   // Add education
   @Post('education')

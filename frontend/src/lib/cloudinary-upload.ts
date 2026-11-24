@@ -8,6 +8,7 @@ export interface UploadSignature {
   apiKey: string;
   cloudName: string;
   folder: string;
+  resourceType: "image" | "raw";
 }
 
 // Cloudinary upload response
@@ -74,7 +75,8 @@ export async function uploadFileWithSignature(
   formData.append("signature", signatureData.signature);
   formData.append("folder", signatureData.folder);
 
-  const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/auto/upload`;
+  const cloudinaryUrl =
+  `https://api.cloudinary.com/v1_1/${signatureData.cloudName}/${signatureData.resourceType}/upload`;
 
   const uploadResponse = await fetch(cloudinaryUrl, {
     method: "POST",

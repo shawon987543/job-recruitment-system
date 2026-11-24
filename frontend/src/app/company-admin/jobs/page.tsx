@@ -1,6 +1,7 @@
 "use client";
 import { useToastErrorState } from "@/components/ui/toast-message-state";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BriefcaseBusiness,
@@ -254,6 +255,7 @@ function JobManagementSkeleton() {
 }
 
 export default function JobManagementPage() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -263,6 +265,7 @@ export default function JobManagementPage() {
   const [filter, setFilter] = useState("ALL");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [jobStep, setJobStep] = useState(1);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [form, setForm] = useState<JobForm>(emptyForm);
   const [saving, setSaving] = useState(false);
@@ -333,11 +336,8 @@ export default function JobManagementPage() {
   }, [jobs, search, filter]);
 
   /* Create job modal */
-  function openCreateModal() {
-    setEditingJob(null);
-    setForm(emptyForm);
-    setFormError("");
-    setModalOpen(true);
+  function goToNewJobPage() {
+    router.push("/company-admin/jobs/new");
   }
 
   /* Edit job modal */
@@ -356,6 +356,7 @@ export default function JobManagementPage() {
     });
 
     setFormError("");
+    setJobStep(1);
     setModalOpen(true);
   }
 
@@ -368,6 +369,31 @@ export default function JobManagementPage() {
       ...previous,
       [field]: value,
     }));
+  }
+
+  function handleWizardSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setFormError("");
+
+    if (jobStep === 1) {
+      if (!form.title.trim() || !form.location.trim() || !richTextHasContent(sanitizeRichText(form.description))) {
+        setFormError("Add a job title, location, and description before continuing.");
+        return;
+      }
+      setJobStep(2);
+      return;
+    }
+
+    if (jobStep === 2) {
+      if (!richTextHasContent(sanitizeRichText(form.requirements))) {
+        setFormError("Add the requirements for this role before continuing.");
+        return;
+      }
+      setJobStep(3);
+      return;
+    }
+
+    void saveJob(event);
   }
 
   /* Save job */
@@ -515,7 +541,7 @@ export default function JobManagementPage() {
 
           <button
             className="jm-create-button"
-            onClick={openCreateModal}
+            onClick={goToNewJobPage}
           >
             <Plus size={19} />
             Create New Job
@@ -669,7 +695,7 @@ export default function JobManagementPage() {
                   {jobs.length === 0 && (
                     <button
                       className="jm-create-button"
-                      onClick={openCreateModal}
+                      onClick={goToNewJobPage}
                     >
                       <Plus size={17} />
                       Create Your First Job
@@ -813,181 +839,94 @@ export default function JobManagementPage() {
             aria-modal="true"
             aria-labelledby="jm-modal-title"
           >
-            <div className="jm-modal-heading">
+            <div className="jm-wizard-heading">
               <div>
-                <span className="jm-eyebrow">
-                  JOB MANAGEMENT
-                </span>
-
-                <h2 id="jm-modal-title">
-                  {editingJob
-                    ? "Edit Job Posting"
-                    : "Create New Job"}
-                </h2>
-
-                <p>
-                  {editingJob
-                    ? "Update the details of your job posting."
-                    : "Fill in the information to create a new job."}
-                </p>
+                <span className="jm-eyebrow">JOB POSTING WORKSPACE</span>
+                <h2 id="jm-modal-title">{editingJob ? "Edit job posting" : "Post a new job"}</h2>
+                <p>{editingJob ? "Update the listing details and review the candidate preview." : "A few clear details help candidates find the right role."}</p>
               </div>
-
-              <button
-                className="jm-modal-close"
-                onClick={() => setModalOpen(false)}
-                disabled={saving}
-                aria-label="Close modal"
-              >
-                <X size={21} />
-              </button>
+              <button type="button" className="jm-wizard-cancel" onClick={() => setModalOpen(false)} disabled={saving}>Cancel</button>
+              <button type="button" className="jm-modal-close" onClick={() => setModalOpen(false)} disabled={saving} aria-label="Close job form"><X size={20} /></button>
             </div>
 
-            <form onSubmit={saveJob}>
-              <div className="jm-form-grid">
-                <label className="jm-field jm-full">
-                  Job Title *
-                  <input
-                    required
-                    maxLength={200}
-                    placeholder="e.g. Frontend Developer"
-                    value={form.title}
-                    onChange={(event) =>
-                      updateForm("title", event.target.value)
-                    }
-                  />
-                </label>
+            <nav className="jm-wizard-steps" aria-label="Job posting steps">
+              {["Job details", "Requirements", "Review & publish"].map((label, index) => {
+                const step = index + 1;
+                return (
+                  <button key={label} type="button" className={`jm-wizard-step ${jobStep === step ? "active" : ""} ${jobStep > step ? "complete" : ""}`} onClick={() => step < jobStep && setJobStep(step)} disabled={saving || step > jobStep} aria-current={jobStep === step ? "step" : undefined}>
+                    <span>{jobStep > step ? "✓" : step}</span>{label}
+                  </button>
+                );
+              })}
+            </nav>
 
-                <label className="jm-field">
-                  Location *
-                  <input
-                    required
-                    maxLength={200}
-                    placeholder="e.g. Dhaka, Bangladesh"
-                    value={form.location}
-                    onChange={(event) =>
-                      updateForm("location", event.target.value)
-                    }
-                  />
-                </label>
-
-                <label className="jm-field">
-                  Job Type *
-                  <select
-                    value={form.jobType}
-                    onChange={(event) =>
-                      updateForm(
-                        "jobType",
-                        event.target.value as JobType
-                      )
-                    }
-                  >
-                    <option value="FULL_TIME">Full Time</option>
-                    <option value="PART_TIME">Part Time</option>
-                    <option value="CONTRACT">Contract</option>
-                    <option value="INTERNSHIP">Internship</option>
-                    <option value="REMOTE">Remote</option>
-                  </select>
-                </label>
-
-                <label className="jm-field">
-                  Minimum Salary (BDT)
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="e.g. 20000"
-                    value={form.salaryMin}
-                    onChange={(event) =>
-                      updateForm("salaryMin", event.target.value)
-                    }
-                  />
-                </label>
-
-                <label className="jm-field">
-                  Maximum Salary (BDT)
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="e.g. 40000"
-                    value={form.salaryMax}
-                    onChange={(event) =>
-                      updateForm("salaryMax", event.target.value)
-                    }
-                  />
-                </label>
-
-                <label className="jm-field jm-full">
-                  Application Deadline
-                  <input
-                    type="date"
-                    value={form.deadline}
-                    onChange={(event) =>
-                      updateForm("deadline", event.target.value)
-                    }
-                  />
-                </label>
-
-                <div className="jm-field jm-full">
-                  <span>Job Description *</span>
-                  <RichTextEditor
-                    label="Job Description"
-                    placeholder="Describe the role, responsibilities, and what the candidate will do..."
-                    value={form.description}
-                    onChange={(value) => updateForm("description", value)}
-                  />
-                </div>
-
-                <div className="jm-field jm-full">
-                  <span>Requirements *</span>
-                  <RichTextEditor
-                    label="Job requirements"
-                    placeholder="List the skills, experience, and qualifications required..."
-                    value={form.requirements}
-                    onChange={(value) => updateForm("requirements", value)}
-                  />
-                </div>
-              </div>
-
-              {formError && (
-                <div className="jm-form-error">
-                  <XCircle size={17} />
-                  {formError}
-                </div>
-              )}
-
-              <div className="jm-form-footer">
-                <button
-                  type="button"
-                  className="jm-cancel-button"
-                  onClick={() => setModalOpen(false)}
-                  disabled={saving}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  className="jm-create-button"
-                  disabled={saving}
-                >
-                  {saving ? (
+            <form className="jm-wizard-form" onSubmit={handleWizardSubmit}>
+              <div className="jm-wizard-layout">
+                <section className="jm-wizard-form-card">
+                  {jobStep === 1 && (
                     <>
-                      <RefreshCw
-                        size={17}
-                        className="ca-spinning"
-                      />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={17} />
-                      {editingJob
-                        ? "Save Changes"
-                        : "Create Job"}
+                      <div className="jm-wizard-section-heading"><h3>Basic information</h3><p>Start with the details candidates use to decide if a role is right for them.</p></div>
+                      <div className="jm-wizard-fields">
+                        <label className="jm-field jm-full">Job title *<input required maxLength={200} placeholder="e.g. Senior Product Designer" value={form.title} onChange={(event) => updateForm("title", event.target.value)} /></label>
+                        <label className="jm-field">Location *<input required maxLength={200} placeholder="e.g. Dhaka, Bangladesh" value={form.location} onChange={(event) => updateForm("location", event.target.value)} /></label>
+                        <label className="jm-field">Employment type<select value={form.jobType} onChange={(event) => updateForm("jobType", event.target.value as JobType)}><option value="FULL_TIME">Full-time</option><option value="PART_TIME">Part-time</option><option value="CONTRACT">Contract</option><option value="INTERNSHIP">Internship</option><option value="REMOTE">Remote</option></select></label>
+                        <label className="jm-field">Minimum salary (BDT)<input type="number" min="0" step="1" placeholder="e.g. 40000" value={form.salaryMin} onChange={(event) => updateForm("salaryMin", event.target.value)} /></label>
+                        <label className="jm-field">Maximum salary (BDT)<input type="number" min="0" step="1" placeholder="e.g. 80000" value={form.salaryMax} onChange={(event) => updateForm("salaryMax", event.target.value)} /></label>
+                        <label className="jm-field jm-full">Application deadline<input type="date" value={form.deadline} onChange={(event) => updateForm("deadline", event.target.value)} /></label>
+                        <div className="jm-field jm-full"><span>Job description *</span><RichTextEditor label="Job description" placeholder="Describe the role, responsibilities, and what success looks like..." value={form.description} onChange={(value) => updateForm("description", value)} /></div>
+                      </div>
                     </>
                   )}
-                </button>
+
+                  {jobStep === 2 && (
+                    <>
+                      <div className="jm-wizard-section-heading"><h3>Role requirements</h3><p>Share the experience, skills, and qualifications someone needs to succeed.</p></div>
+                      <div className="jm-field jm-wizard-requirements"><span>Requirements *</span><RichTextEditor label="Job requirements" placeholder="List the essential skills, experience, and qualifications..." value={form.requirements} onChange={(value) => updateForm("requirements", value)} /></div>
+                      <div className="jm-wizard-tip"><strong>Keep the essentials clear</strong><p>Use short, specific points. Focus on must-have qualifications and responsibilities for this role.</p></div>
+                    </>
+                  )}
+
+                  {jobStep === 3 && (
+                    <>
+                      <div className="jm-wizard-section-heading"><h3>Review your job posting</h3><p>Check the details before creating the draft. You can publish it from your job list when it is ready.</p></div>
+                      <dl className="jm-review-details">
+                        <div><dt>Job title</dt><dd>{form.title || "Not added"}</dd></div>
+                        <div><dt>Location</dt><dd>{form.location || "Not added"}</dd></div>
+                        <div><dt>Employment type</dt><dd>{form.jobType.replaceAll("_", " ")}</dd></div>
+                        <div><dt>Salary range</dt><dd>{formatSalary(form.salaryMin ? Number(form.salaryMin) : null, form.salaryMax ? Number(form.salaryMax) : null)}</dd></div>
+                        <div><dt>Application deadline</dt><dd>{form.deadline ? formatDate(form.deadline) : "No deadline set"}</dd></div>
+                      </dl>
+                      <div className="jm-review-copy"><h4>Job description</h4><p>{form.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "No description added."}</p></div>
+                      <div className="jm-review-copy"><h4>Requirements</h4><p>{form.requirements.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "No requirements added."}</p></div>
+                    </>
+                  )}
+
+                  {formError && <div className="jm-form-error"><XCircle size={17} />{formError}</div>}
+
+                  <div className="jm-wizard-footer">
+                    <button type="button" className="jm-cancel-button" onClick={() => jobStep === 1 ? setModalOpen(false) : setJobStep(jobStep - 1)} disabled={saving}>{jobStep === 1 ? "Cancel" : "Back"}</button>
+                    <button type="submit" className="jm-create-button" disabled={saving}>
+                      {saving ? <><RefreshCw size={16} className="ca-spinning" />Saving...</> : jobStep < 3 ? <>Continue <span aria-hidden="true">→</span></> : <><Plus size={16} />{editingJob ? "Save changes" : "Create job draft"}</>}
+                    </button>
+                  </div>
+                </section>
+
+                <aside className="jm-wizard-aside">
+                  <section className="jm-wizard-tips"><h3>{jobStep === 2 ? "Writing requirements" : jobStep === 3 ? "Before you create" : "Tips for a great posting"}</h3>
+                    <div><strong>{jobStep === 2 ? "Be specific" : "Lead with impact"}</strong><p>{jobStep === 2 ? "Describe the experience and skills a candidate will use in this role." : "Describe what this person will own and contribute to the team."}</p></div>
+                    <div><strong>{jobStep === 3 ? "Check the details" : "Keep it focused"}</strong><p>{jobStep === 3 ? "Review the salary, location, and deadline before creating the draft." : "Clear, concise posts help the right candidates understand the opportunity."}</p></div>
+                    <div><strong>Share a pay range</strong><p>Including compensation helps candidates decide whether to apply.</p></div>
+                  </section>
+                  <section className="jm-wizard-preview"><h3>Live preview</h3><p className="jm-preview-subtitle">This is how candidates will see your post.</p>
+                    <article className="jm-preview-job">
+                      <div className="jm-preview-company"><span>{form.title.trim().charAt(0).toUpperCase() || "J"}</span><div><strong>Your company</strong><small>{form.location || "Location not set"}</small></div></div>
+                      <h4>{form.title || "Your job title"}</h4>
+                      <div className="jm-preview-tags"><span>{form.jobType.replaceAll("_", " ")}</span><span>{form.salaryMin || form.salaryMax ? formatSalary(form.salaryMin ? Number(form.salaryMin) : null, form.salaryMax ? Number(form.salaryMax) : null) : "Salary not specified"}</span></div>
+                      <p>{form.description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 190) || "Your job description will appear here once you add it."}</p>
+                      <span className="jm-preview-apply">Apply now</span>
+                    </article>
+                  </section>
+                </aside>
               </div>
             </form>
           </div>

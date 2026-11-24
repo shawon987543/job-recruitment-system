@@ -1,6 +1,7 @@
 "use client";
 import { useToastErrorState } from "@/components/ui/toast-message-state";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   Search,
   RefreshCw,
@@ -42,6 +43,7 @@ interface Application {
     id: number;
     name: string;
     email: string;
+    profilePictureUrl?: string | null;
   } | null;
 }
 
@@ -49,6 +51,7 @@ interface Candidate {
   id: number;
   name: string;
   email: string;
+  profilePictureUrl?: string | null;
   applications: Application[];
   latestAppliedAt: string;
 }
@@ -138,6 +141,7 @@ export default function CandidatesPage() {
           id: candidate.id,
           name: candidate.name,
           email: candidate.email,
+          profilePictureUrl: candidate.profilePictureUrl,
           applications: [application],
           latestAppliedAt: application.appliedAt,
         });
@@ -313,6 +317,19 @@ export default function CandidatesPage() {
                       <div className="ca-candidates-person">
                         <div className="ca-candidates-avatar">
                           {candidate.name.charAt(0).toUpperCase()}
+                          {candidate.profilePictureUrl && (
+                            <Image
+                              src={candidate.profilePictureUrl}
+                              alt=""
+                              fill
+                              sizes="42px"
+                              unoptimized
+                              aria-hidden="true"
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
                         </div>
 
                         <div>
@@ -394,6 +411,19 @@ export default function CandidatesPage() {
             <div className="ca-candidates-profile">
               <div className="ca-candidates-profile-avatar">
                 {selectedCandidate.name.charAt(0).toUpperCase()}
+                {selectedCandidate.profilePictureUrl && (
+                  <Image
+                    src={selectedCandidate.profilePictureUrl}
+                    alt=""
+                    fill
+                    sizes="84px"
+                    unoptimized
+                    aria-hidden="true"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
               </div>
 
               <div>

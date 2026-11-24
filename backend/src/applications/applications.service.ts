@@ -338,6 +338,7 @@ async findAllForSuperAdmin() {
                 name: candidate.name,
                 email: candidate.email,
                 resumeUrl: candidateProfile?.resumeUrl ?? null,
+                profilePictureUrl: candidateProfile?.profilePictureUrl ?? null,
               }
             : null,
         };

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
-  ArrowLeft,
   BriefcaseBusiness,
   Building2,
   CalendarDays,
@@ -18,6 +17,8 @@ import {
   CheckCircle2,
   ClipboardList,
   RefreshCw,
+  Bookmark,
+  Share2,
 } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import RichTextContent from "@/components/ui/rich-text-content";
@@ -151,6 +152,7 @@ export default function JobDetailsPage() {
   const [applicationError, setApplicationError] = useToastErrorState();
   const [application, setApplication] = useState<Application | null>(null);
   const [checkingApplication, setCheckingApplication] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
 
   const fetchJob = useCallback(async () => {
     if (!jobId || !/^\d+$/.test(jobId)) {
@@ -257,18 +259,31 @@ export default function JobDetailsPage() {
     }
   };
 
+  const handleShare = async () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: job?.title, url: window.location.href });
+      } catch {
+        // Sharing was dismissed by the visitor.
+      }
+      return;
+    }
+    await navigator.clipboard?.writeText(window.location.href);
+  };
+
   return (
     <main className="job-details-page">
       <header className="job-details-header">
-        <Link href="/candidate/jobs" className="job-details-back">
-          <ArrowLeft size={18} />
-          Back to Jobs
-        </Link>
-
         <Link href="/candidate" className="job-details-brand">
           <BriefcaseBusiness size={19} />
           CareerHub
         </Link>
+        <nav className="job-details-nav" aria-label="Main navigation">
+          <Link href="/candidate/jobs" className="active">Find jobs</Link>
+          <Link href="/candidate/applications">My applications</Link>
+          <Link href="/candidate/profile">Profile</Link>
+        </nav>
+        <Link href="/candidate/profile" className="job-details-profile">My profile</Link>
       </header>
 
       {loading ? (
@@ -289,15 +304,14 @@ export default function JobDetailsPage() {
         </div>
       ) : (
         <>
+          <div className="job-details-breadcrumbs">
+            <Link href="/candidate/jobs">All jobs</Link><span>/</span><span>Job details</span>
+          </div>
+
           <section className="job-details-hero">
             <div className="job-details-hero-top">
-              <span className="job-details-eyebrow">
-                JOB OPPORTUNITY
-              </span>
-
-              <span className="job-details-status">
-                {formatJobType(job.jobType)}
-              </span>
+              <span className="job-details-eyebrow"><i /> ACTIVELY HIRING</span>
+              <span className="job-details-posted">Posted {formatDate(job.createdAt)}</span>
             </div>
 
             <div className="job-details-title-row">
@@ -307,33 +321,25 @@ export default function JobDetailsPage() {
 
               <div>
                 <h1>{job.title}</h1>
-                <p className="job-details-company-name">
-                  {job.companyName || "Company"}
-                </p>
+                <p className="job-details-company-name">{job.companyName || "Company"}<span>·</span>{job.location || "Location not specified"}<span>·</span>{formatJobType(job.jobType)}</p>
+              </div>
+              <div className="job-details-hero-actions">
+                <button type="button" className={isSaved ? "saved" : ""} onClick={() => setIsSaved(!isSaved)} aria-pressed={isSaved}><Bookmark size={17} />{isSaved ? "Saved" : "Save job"}</button>
+                <button type="button" onClick={() => void handleShare()}><Share2 size={17} />Share</button>
               </div>
             </div>
 
             <div className="job-details-hero-meta">
-              <span>
-                <MapPin size={17} />
-                {job.location || "Location not specified"}
-              </span>
-
-              <span>
-                <BriefcaseBusiness size={17} />
-                {formatJobType(job.jobType)}
-              </span>
-
-              <span>
-                <CalendarDays size={17} />
-                Posted {formatDate(job.createdAt)}
-              </span>
+              <span>{formatJobType(job.jobType)}</span>
+              <span>{job.location || "Location not specified"}</span>
+              <span>{formatSalary(job)}</span>
             </div>
           </section>
 
           <div className="job-details-layout">
             <div className="job-details-main">
               <section className="job-details-card">
+                <div className="job-details-tabs"><a href="#overview" className="active">Overview</a><a href="#requirements">Requirements</a></div>
                 <div className="job-details-section-heading">
                   <div className="job-details-section-icon">
                     <FileText size={21} />
@@ -341,7 +347,7 @@ export default function JobDetailsPage() {
                   <h2>Job Description</h2>
                 </div>
 
-                <div className="job-details-content">
+                <div className="job-details-content" id="overview">
                   {job.description?.trim() ? (
                     <RichTextContent
                       html={job.description}
@@ -355,7 +361,7 @@ export default function JobDetailsPage() {
                 </div>
               </section>
 
-              <section className="job-details-card">
+              <section className="job-details-card" id="requirements">
                 <div className="job-details-section-heading">
                   <div className="job-details-section-icon">
                     <ListChecks size={21} />
@@ -379,15 +385,16 @@ export default function JobDetailsPage() {
             </div>
 
             <aside className="job-details-sidebar">
-              <section className="job-details-card job-overview-card">
-                <h2>Job Overview</h2>
+              <section className="job-details-card apply-job-card job-overview-card">
+                <h2>Your next chapter starts here.</h2>
+                <p className="apply-intro">A great opportunity is waiting. Take the next step and introduce yourself to the team.</p>
 
                 <div className="job-overview-item">
                   <div className="job-overview-icon">
                     <Wallet size={19} />
                   </div>
                   <div>
-                    <span>Salary</span>
+                  <span>Salary range</span>
                     <strong>{formatSalary(job)}</strong>
                   </div>
                 </div>
@@ -407,7 +414,7 @@ export default function JobDetailsPage() {
                     <BriefcaseBusiness size={19} />
                   </div>
                   <div>
-                    <span>Job Type</span>
+                  <span>Employment type</span>
                     <strong>{formatJobType(job.jobType)}</strong>
                   </div>
                 </div>
@@ -429,26 +436,6 @@ export default function JobDetailsPage() {
                   <div>
                     <span>Posted Date</span>
                     <strong>{formatDate(job.createdAt)}</strong>
-                  </div>
-                </div>
-
-                <Link
-                  href="/candidate/jobs"
-                  className="job-details-browse-button"
-                >
-                  <ArrowLeft size={17} />
-                  Back to All Jobs
-                </Link>
-              </section>
-
-              <section className="job-details-card apply-job-card">
-                <div className="apply-job-heading">
-                  <div className="job-details-section-icon">
-                    <Send size={20} />
-                  </div>
-                  <div>
-                    <h2>Apply for This Job</h2>
-                    <p>Take the next step in your career.</p>
                   </div>
                 </div>
 

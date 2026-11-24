@@ -8,7 +8,6 @@ import {
   Building2,
   BriefcaseBusiness,
   FileText,
-  BarChart3,
   X,
   Menu,
   TrendingUp,
@@ -201,6 +200,7 @@ function MonthlyChart({
 
   return (
     <div
+      className="admin-report-chart-card"
       style={{
         background: "#ffffff",
         border: "1px solid #e8edf4",
@@ -549,7 +549,6 @@ export default function ReportsPage() {
     isFetching,
     isError,
     error: queryError,
-    refetch,
   } = useQuery<DashboardStats>({
     queryKey: ["admin-reports"],
     queryFn: async () => {
@@ -609,7 +608,6 @@ export default function ReportsPage() {
     isFetching: monthlyFetching,
     isError: monthlyIsError,
     error: monthlyError,
-    refetch: refetchMonthly,
   } = useQuery<MonthlyAnalytics>({
     queryKey: ["admin-monthly-analytics"],
     queryFn: async () => {
@@ -645,7 +643,6 @@ export default function ReportsPage() {
     isFetching: companyPerformanceFetching,
     isError: companyPerformanceIsError,
     error: companyPerformanceError,
-    refetch: refetchCompanyPerformance,
   } = useQuery<CompanyPerformance>({
     queryKey: ["admin-company-performance"],
     queryFn: async () => {
@@ -685,7 +682,6 @@ export default function ReportsPage() {
     isLoading: filteredReportsLoading,
     isError: filteredReportsIsError,
     error: filteredReportsError,
-    refetch: refetchFilteredReports,
   } = useQuery<FilteredReports>({
     queryKey: [
       "admin-filtered-reports",
@@ -972,23 +968,10 @@ export default function ReportsPage() {
     setSuccess("Filtered report exported successfully.");
   };
 
-  // REFRESH ALL REPORTS
-
-  const refreshAllReports = async () => {
-    setError("");
-
-    await Promise.all([
-      refetch(),
-      refetchMonthly(),
-      refetchCompanyPerformance(),
-      ...(customDateRangeReady ? [refetchFilteredReports()] : []),
-    ]);
-  };
-
   // PAGE UI
 
   return (
-    <div className="admin-layout admin-pages-theme">
+    <div className="admin-layout admin-pages-theme admin-reports-theme">
       {/* SHARED ADMIN SIDEBAR */}
 
       <AdminSidebar
@@ -1041,24 +1024,31 @@ export default function ReportsPage() {
 
           {/* WELCOME SECTION */}
 
-          <div className="company-welcome">
+          <div className="company-welcome admin-reports-heading">
             <div>
               <span>SUPER ADMIN / REPORTS</span>
-              <h2>Platform overview</h2>
+              <h2>Reports &amp; analytics</h2>
               <p>
-                Get an overview of users, companies, job postings,
-                and candidate applications across CareerHub.
+                Your hiring performance and platform activity, all in one place.
               </p>
             </div>
 
-            <div className="company-welcome-icon">
-              <BarChart3 size={55} />
+            <div className="admin-reports-heading-actions">
+              <button
+                type="button"
+                className="admin-reports-export"
+                onClick={exportFilteredReports}
+                disabled={!filteredReports || filteredReportsLoading || !customDateRangeReady}
+              >
+                <FileText size={17} /> Export report
+              </button>
             </div>
           </div>
 
           {/* DATE-FILTERED REPORTS */}
 
           <section
+            className="admin-reports-filter-panel"
             style={{
               ...cardStyle,
               marginBottom: 24,
@@ -1099,42 +1089,6 @@ export default function ReportsPage() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={exportFilteredReports}
-                disabled={
-                  !filteredReports ||
-                  filteredReportsLoading ||
-                  !customDateRangeReady
-                }
-                style={{
-                  minHeight: 42,
-                  padding: "10px 16px",
-                  border: "none",
-                  borderRadius: 9,
-                  background:
-                    !filteredReports ||
-                    filteredReportsLoading ||
-                    !customDateRangeReady
-                      ? "#cbd5e1"
-                      : "#2d998c",
-                  color: "#ffffff",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor:
-                    !filteredReports ||
-                    filteredReportsLoading ||
-                    !customDateRangeReady
-                      ? "not-allowed"
-                      : "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <FileText size={17} />
-                Export CSV
-              </button>
             </div>
 
             <div
@@ -1351,6 +1305,7 @@ export default function ReportsPage() {
               {/* SUMMARY CARDS */}
 
               <div
+                className="admin-reports-summary-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns:
@@ -1417,6 +1372,7 @@ export default function ReportsPage() {
               {/* TOTAL PLATFORM RECORDS */}
 
               <div
+                className="admin-reports-total-records"
                 style={{
                   ...cardStyle,
                   marginBottom: 24,
@@ -1476,7 +1432,7 @@ export default function ReportsPage() {
 
               {/* MONTHLY ANALYTICS */}
 
-              <div style={{ marginBottom: 28 }}>
+              <div className="admin-reports-monthly" style={{ marginBottom: 28 }}>
                 <div
                   style={{
                     display: "flex",
@@ -1542,7 +1498,7 @@ export default function ReportsPage() {
                     </span>
                   </div>
                 ) : monthlyAnalytics ? (
-                  <div style={{ display: "grid", gap: 20 }}>
+                  <div className="admin-reports-chart-grid" style={{ display: "grid", gap: 20 }}>
                     <MonthlyChart
                       title="User Registrations"
                       description="New user accounts registered each month."
@@ -1572,7 +1528,7 @@ export default function ReportsPage() {
 
               {/* COMPANY PERFORMANCE */}
 
-              <div style={{ marginBottom: 28 }}>
+              <div className="admin-reports-company-performance" style={{ marginBottom: 28 }}>
                 <div style={{ marginBottom: 18 }}>
                   <h2
                     style={{
@@ -1875,6 +1831,7 @@ export default function ReportsPage() {
               {/* BREAKDOWN CARDS */}
 
               <div
+                className="admin-reports-breakdown-grid"
                 style={{
                   display: "grid",
                   gridTemplateColumns:

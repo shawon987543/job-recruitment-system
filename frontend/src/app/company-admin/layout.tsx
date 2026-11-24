@@ -94,6 +94,8 @@ export default function CompanyAdminLayout({
   const pageTitle =
   pathname === "/company-admin"
     ? "Dashboard"
+    : pathname === "/company-admin/jobs/new"
+      ? "Post a new job"
     : pathname.startsWith("/company-admin/jobs")
       ? "Job Management"
       : pathname.startsWith("/company-admin/applications")

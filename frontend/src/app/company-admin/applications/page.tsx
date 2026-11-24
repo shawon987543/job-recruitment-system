@@ -2,6 +2,7 @@
 import { useToastErrorState } from "@/components/ui/toast-message-state";
 import toast from "react-hot-toast";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   Search,
   RefreshCw,
@@ -46,6 +47,7 @@ interface Application {
     id: number;
     name: string;
     email: string;
+    profilePictureUrl?: string | null;
     resumeUrl?: string | null;
   } | null;
 }
@@ -90,14 +92,28 @@ function getInitials(name: string) {
 
 function assetHref(assetUrl?: string | null) {
   if (!assetUrl) return "#";
-  if (assetUrl.startsWith("http://") || assetUrl.startsWith("https://")) {
-    return assetUrl;
+  let resolvedUrl = assetUrl;
+
+  if (!assetUrl.startsWith("http://") && !assetUrl.startsWith("https://")) {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+    const serverUrl = apiUrl.replace(/\/api\/?$/, "");
+    resolvedUrl = `${serverUrl}${assetUrl.startsWith("/") ? "" : "/"}${assetUrl}`;
   }
 
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-  const serverUrl = apiUrl.replace(/\/api\/?$/, "");
-  return `${serverUrl}${assetUrl.startsWith("/") ? "" : "/"}${assetUrl}`;
+  // Resume signatures upload documents as Cloudinary raw resources. Some older
+  // saved PDF URLs were persisted with the image delivery path, which returns
+  // a 404 even though the raw resume exists.
+  if (
+    resolvedUrl.includes("res.cloudinary.com") &&
+    (/\.(?:pdf|docx?)(?:$|[?#])/i.test(resolvedUrl) ||
+      resolvedUrl.includes("/candidates/resumes/")) &&
+    resolvedUrl.includes("/image/upload/")
+  ) {
+    return resolvedUrl.replace("/image/upload/", "/raw/upload/");
+  }
+
+  return resolvedUrl;
 }
 
 export default function CompanyApplicationsPage() {
@@ -105,7 +121,7 @@ export default function CompanyApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useToastErrorState();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("ALL");
+  const [filter, setFilter] = useState<ApplicationStatus | "ALL">("ALL");
 
   const [selectedApplication, setSelectedApplication] =
     useState<Application | null>(null);
@@ -211,15 +227,21 @@ export default function CompanyApplicationsPage() {
       );
       toast.success("Application status updated.");
 
-      setSelectedApplication((previous) =>
-        previous
-          ? {
-              ...previous,
-              status,
-              adminNotes: notes,
-            }
-          : null,
-      );
+      if (status === "REJECTED") {
+        setFilter("REJECTED");
+        setSearch("");
+        setSelectedApplication(null);
+      } else {
+        setSelectedApplication((previous) =>
+          previous
+            ? {
+                ...previous,
+                status,
+                adminNotes: notes,
+              }
+            : null,
+        );
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -324,8 +346,8 @@ export default function CompanyApplicationsPage() {
           <section className="ap-table-card">
             <div className="ap-table-header">
               <div>
-                <h3>All Applications</h3>
-                <p>Review and manage candidates who applied for your jobs.</p>
+                <h3>{filter === "REJECTED" ? "Rejected Applications" : "All Applications"}</h3>
+                <p>{filter === "REJECTED" ? "Review candidates whose applications were rejected." : "Review and manage candidates who applied for your jobs."}</p>
               </div>
 
               <span className="ap-result-count">
@@ -346,8 +368,9 @@ export default function CompanyApplicationsPage() {
 
               <select
                 value={filter}
-                onChange={(e) => setFilter(e.target.value)}
+                onChange={(e) => setFilter(e.target.value as ApplicationStatus | "ALL")}
                 className="ap-filter"
+                aria-label="Filter applications by status"
               >
                 <option value="ALL">All Statuses</option>
                 {statusOptions.map((status) => (
@@ -398,6 +421,19 @@ export default function CompanyApplicationsPage() {
                             <div className="ap-candidate-avatar">
                               {getInitials(
                                 application.candidate?.name || "Candidate",
+                              )}
+                              {application.candidate?.profilePictureUrl && (
+                                <Image
+                                  src={assetHref(application.candidate.profilePictureUrl)}
+                                  alt=""
+                                  fill
+                                  sizes="36px"
+                                  unoptimized
+                                  aria-hidden="true"
+                                  onError={(event) => {
+                                    event.currentTarget.style.display = "none";
+                                  }}
+                                />
                               )}
                             </div>
 
@@ -497,6 +533,19 @@ export default function CompanyApplicationsPage() {
                 <div className="ap-detail-avatar">
                   {getInitials(
                     selectedApplication.candidate?.name || "Candidate",
+                  )}
+                  {selectedApplication.candidate?.profilePictureUrl && (
+                    <Image
+                      src={assetHref(selectedApplication.candidate.profilePictureUrl)}
+                      alt=""
+                      fill
+                      sizes="54px"
+                      unoptimized
+                      aria-hidden="true"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
                   )}
                 </div>
 
@@ -620,6 +669,7 @@ export default function CompanyApplicationsPage() {
                     </button>
 
                     <button
+                      type="button"
                       className="ap-action-select"
                       disabled={updating}
                       onClick={() =>
@@ -630,6 +680,7 @@ export default function CompanyApplicationsPage() {
                     </button>
 
                     <button
+                      type="button"
                       className="ap-action-reject"
                       disabled={updating}
                       onClick={() =>
