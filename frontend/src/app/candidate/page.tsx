@@ -1,11 +1,15 @@
-
 "use client";
-
 import { FormEvent, useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  connectNotificationSocket,
+  disconnectNotificationSocket,
+} from '@/lib/notification-socket';
+
+
 import {
   ArrowRight,
   BriefcaseBusiness,
@@ -17,6 +21,8 @@ import {
   Sparkles,
   UserRound,
   X,
+  Bell,
+  CheckCheck,
 } from "lucide-react";
 import Skeleton from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
@@ -27,6 +33,16 @@ interface LoggedInUser {
   name: string;
   email: string;
   role: string;
+}
+
+// Notification
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 interface CandidateProfilePicture {
@@ -47,12 +63,78 @@ function profilePictureSrc(pictureUrl?: string | null) {
 }
 
 export default function CandidateDashboard() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [ unreadCount, setUnreadCount] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+
   const router = useRouter();
   const [user, setUser] = useState<LoggedInUser | null>(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  //Notificaton
+
+// Load existing notifications from PostgreSQL
+useEffect(() => {
+  let isMounted = true;
+
+  async function loadNotifications() {
+    try {
+      const [notificationData, countData] = await Promise.all([
+        apiRequest("/notifications"),
+        apiRequest("/notifications/unread-count"),
+      ]);
+
+      if (!isMounted) return;
+
+      setNotifications(notificationData as Notification[]);
+      setUnreadCount(countData as number);
+    } catch (error) {
+      console.error("Failed to load notifications:", error);
+    }
+  }
+
+  void loadNotifications();
+
+  return () => {
+    isMounted = false;
+  };
+}, []);
+
+// Listen for new real-time notifications
+useEffect(() => {
+  const accessToken = sessionStorage.getItem("access_token");
+
+  if (!accessToken) return;
+
+  const socket = connectNotificationSocket(accessToken);
+
+  const handleNewNotification = (notification: Notification) => {
+    setNotifications((previous) => {
+      if (previous.some((item) => item.id === notification.id)) {
+        return previous;
+      }
+
+      return [notification, ...previous].slice(0, 50);
+    });
+
+    if (!notification.isRead) {
+      setUnreadCount((previous) => previous + 1);
+    }
+
+    toast.success("You received a new notification!");
+  };
+
+  socket.on("notification:new", handleNewNotification);
+
+  return () => {
+    socket.off("notification:new", handleNewNotification);
+    disconnectNotificationSocket();
+  };
+}, []);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -95,6 +177,51 @@ export default function CandidateDashboard() {
       isMounted = false;
     };
   }, [router]);
+
+  async function handleMarkAsRead(notification: Notification) {
+    if (notification.isRead) return;
+
+    try {
+      await apiRequest(`/notifications/${notification.id}/read`, {
+        method: "PATCH",
+      });
+
+      setNotifications((previous) =>
+        previous.map((item) =>
+          item.id === notification.id
+            ? { ...item, isRead: true }
+            : item,
+        ),
+      );
+
+      setUnreadCount((previous) => Math.max(0, previous - 1));
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not update notification.",
+      );
+    }
+  }
+
+  async function handleMarkAllAsRead() {
+    if (unreadCount === 0) return;
+
+    try {
+      await apiRequest("/notifications/read-all", {
+        method: "PATCH",
+      });
+
+      setNotifications((previous) =>
+        previous.map((item) => ({ ...item, isRead: true })),
+      );
+
+      setUnreadCount(0);
+      toast.success("All notifications marked as read.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not update notifications.",
+      );
+    }
+  }
 
   function handleLogout() {
     sessionStorage.removeItem("access_token");
@@ -227,27 +354,107 @@ export default function CandidateDashboard() {
             </div>
           </div>
 
-          <div className="candidate-topbar-right">
-            <div className="candidate-user-info">
-              <div className="candidate-avatar">
-                {profilePictureUrl ? (
-                  <Image
-                    src={profilePictureSrc(profilePictureUrl)}
-                    alt=""
-                    width={39}
-                    height={39}
-                    unoptimized
-                  />
-                ) : (
-                  loading ? "C" : initial
+         <div className="candidate-topbar-right">
+  <div className="candidate-notification-wrapper">
+    <button
+      type="button"
+      className="candidate-notification-button"
+      aria-label={`Notifications, ${unreadCount} unread`}
+      aria-expanded={notificationOpen}
+      onClick={() => setNotificationOpen((previous) => !previous)}
+    >
+      <Bell size={21} />
+
+      {unreadCount > 0 && (
+        <span className="candidate-notification-badge">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+
+    {notificationOpen && (
+      <div className="candidate-notification-dropdown">
+        <div className="candidate-notification-heading">
+          <div>
+            <h3>Notifications</h3>
+            <p>{unreadCount} unread</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleMarkAllAsRead}
+            disabled={unreadCount === 0}
+            title="Mark all as read"
+          >
+            <CheckCheck size={17} />
+            <span>Read all</span>
+          </button>
+        </div>
+
+        <div className="candidate-notification-list">
+          {notifications.length === 0 ? (
+            <div className="candidate-notification-empty">
+              <Bell size={27} />
+              <strong>No notifications yet</strong>
+              <p>We&apos;ll let you know when something happens.</p>
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`candidate-notification-item ${
+                  !notification.isRead ? "unread" : ""
+                }`}
+              >
+                <div className="candidate-notification-dot" />
+
+                <div className="candidate-notification-body">
+                  <strong>{notification.title}</strong>
+                  <p>{notification.message}</p>
+                  <span>
+                    {new Date(notification.createdAt).toLocaleString()}
+                  </span>
+                </div>
+
+                {!notification.isRead && (
+                  <button
+                    type="button"
+                    className="candidate-notification-read"
+                    onClick={() => handleMarkAsRead(notification)}
+                    aria-label="Mark as read"
+                    title="Mark as read"
+                  >
+                    <CheckCheck size={17} />
+                  </button>
                 )}
               </div>
-              <div className="candidate-user-text">
-                <strong>{loading ? "Candidate" : user?.name}</strong>
-                <span>Candidate</span>
-              </div>
-            </div>
-          </div>
+            ))
+          )}
+        </div>
+      </div>
+    )}
+  </div>
+
+  <div className="candidate-user-info">
+    <div className="candidate-avatar">
+      {profilePictureUrl ? (
+        <Image
+          src={profilePictureSrc(profilePictureUrl)}
+          alt=""
+          width={39}
+          height={39}
+          unoptimized
+        />
+      ) : (
+        loading ? "C" : initial
+      )}
+    </div>
+    <div className="candidate-user-text">
+      <strong>{loading ? "Candidate" : user?.name}</strong>
+      <span>Candidate</span>
+    </div>
+  </div>
+  </div>
         </header>
 
         <div className="candidate-content">

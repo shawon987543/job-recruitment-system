@@ -15,6 +15,7 @@ import { AdminModule } from './admin/admin.module';
 import { CompanyAdminModule } from './company-admin/company-admin.module';
 import { InterviewsModule } from './interviews/interviews.module';
 import { CandidateProfileModule } from './candidate-profile/candidate-profile.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { CandidateProfileModule } from './candidate-profile/candidate-profile.mo
     CompanyAdminModule,
     InterviewsModule,
     CandidateProfileModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

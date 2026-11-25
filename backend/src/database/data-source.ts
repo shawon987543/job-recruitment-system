@@ -9,6 +9,10 @@ import { CandidateProfile } from '../candidate-profile/entities/candidate-profil
 import { Education } from '../candidate-profile/entities/education.entity';
 import { Experience } from '../candidate-profile/entities/experience.entity';
 import { CompanyAdminApplication } from '../users/entities/company-admin-application.entity';
+
+import { Notification } from '../notifications/entities/notification.entity';
+
+
 const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
@@ -22,6 +26,7 @@ const AppDataSource = new DataSource({
   Education,
   Experience,
   CompanyAdminApplication,
+  Notification,
 ],
   migrations: [__dirname + '/migrations/*.ts'],
   synchronize: false,
