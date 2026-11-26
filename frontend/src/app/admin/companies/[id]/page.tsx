@@ -4,6 +4,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Skeleton from "@/components/ui/skeleton";
@@ -531,6 +532,7 @@ export default function CompanyDetailsPage() {
 
           <div>
             <h1 style={{ margin: 0 }}>Company Details</h1>
+            <AdminNotifications />
 
             <p
               style={{

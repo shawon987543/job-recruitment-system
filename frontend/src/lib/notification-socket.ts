@@ -1,42 +1,105 @@
-import {io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
+import {
+  refreshAccessTokenOnce,
+  subscribeToAccessToken,
+  clearSessionAndRedirect,
+} from "@/lib/auth-session";
 
 let notificationSocket: Socket | null = null;
+let unsubscribeTokenListener: (() => void) | null = null;
+let refreshingSocketToken = false;
 
 export function connectNotificationSocket(
-    accessToken: string,
-) {
-    if (notificationSocket?.connected) {
-        return notificationSocket;
+  accessToken: string,
+): Socket {
+  if (notificationSocket) {
+    notificationSocket.auth = { token: accessToken };
+
+    if (!notificationSocket.connected) {
+      notificationSocket.connect();
     }
 
-    notificationSocket = io(
-        process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ||
-        'http://localhost:3001',
-        {
-            auth: {
-                token: accessToken,
-            },
-            transports: ['websocket'],
-        },
-    );
-
-    notificationSocket.on('connect', () => {
-        console.log('Notification socket connected: ', notificationSocket?.id);
-    });
-
-    notificationSocket.on('connect_error',(error) =>{
-        console.error('Notification socket error: ', error.message);
-    });
-
-    notificationSocket.on('notification:new',(notification) =>{
-        console.log('New real-time notification:', notification);
-    })
-
     return notificationSocket;
+  }
+
+  const serverUrl =
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, "") ||
+    "http://localhost:3000";
+
+  notificationSocket = io(serverUrl, {
+    auth: { token: accessToken },
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 2000,
+  });
+
+  // Keep the socket updated whenever the API refreshes the access token.
+  unsubscribeTokenListener = subscribeToAccessToken((newToken) => {
+    if (!notificationSocket) return;
+
+    notificationSocket.auth = { token: newToken };
+  });
+
+  notificationSocket.on("connect", () => {
+    console.log(
+      "Notification socket connected:",
+      notificationSocket?.id,
+    );
+  });
+
+  notificationSocket.on("disconnect", (reason) => {
+    console.log("Notification socket disconnected:", reason);
+  });
+
+  notificationSocket.on("connect_error", async (error) => {
+    console.error("Notification socket error:", error.message);
+
+    const isAuthenticationError =
+      /unauthorized|token|expired/i.test(error.message);
+
+    if (!isAuthenticationError || refreshingSocketToken) {
+      return;
+    }
+
+    refreshingSocketToken = true;
+
+    try {
+      // Stop automatic retries using the expired token.
+      notificationSocket?.disconnect();
+
+      const newToken = await refreshAccessTokenOnce();
+
+      if (!newToken) {
+        clearSessionAndRedirect();
+        return;
+      }
+
+      if (!notificationSocket) return;
+
+      notificationSocket.auth = { token: newToken };
+      notificationSocket.connect();
+    } catch (refreshError) {
+      console.error(
+        "Could not reconnect notification socket:",
+        refreshError,
+      );
+    } finally {
+      refreshingSocketToken = false;
+    }
+  });
+
+  return notificationSocket;
 }
 
-export function disconnectNotificationSocket(){
-    notificationSocket?.disconnect();
-    notificationSocket = null;
+export function disconnectNotificationSocket() {
+  unsubscribeTokenListener?.();
+  unsubscribeTokenListener = null;
+
+  notificationSocket?.removeAllListeners();
+  notificationSocket?.disconnect();
+  notificationSocket = null;
+
+  refreshingSocketToken = false;
 }

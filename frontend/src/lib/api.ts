@@ -1,55 +1,12 @@
+
 import toast from "react-hot-toast";
+import {
+  refreshAccessTokenOnce,
+  clearSessionAndRedirect,
+} from "@/lib/auth-session";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
-
-let refreshPromise: Promise<string | null> | null = null;
-
-/**
- * Refresh the access token using the stored refresh token.
- */
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = sessionStorage.getItem("refresh_token");
-
-  if (!refreshToken) return null;
-
-  try {
-    const response = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-
-    if (!data.access_token || !data.refresh_token) {
-      return null;
-    }
-
-    sessionStorage.setItem("access_token", data.access_token);
-    sessionStorage.setItem("refresh_token", data.refresh_token);
-
-    return data.access_token;
-  } catch (error) {
-    console.error("Token refresh failed:", error);
-    return null;
-  }
-}
-
-/** Share concurrent refreshes, then allow a later token expiry to refresh again. */
-function refreshAccessTokenOnce(): Promise<string | null> {
-  if (!refreshPromise) {
-    refreshPromise = refreshAccessToken().finally(() => {
-      refreshPromise = null;
-    });
-  }
-
-  return refreshPromise;
-}
 
 /**
  * Get the currently stored access token.
@@ -58,17 +15,16 @@ async function getValidAccessToken(): Promise<string> {
   const token = sessionStorage.getItem("access_token");
 
   if (token) return token;
+
   return handleUnauthorized("");
 }
 
 /**
  * Handle expired access tokens.
- * Multiple simultaneous requests share one refresh request.
  */
 async function handleUnauthorized(failedToken: string): Promise<string> {
-  // Another request may already have refreshed the token while this request
-  // was in flight. Reuse that newer token instead of rotating twice.
   const currentToken = sessionStorage.getItem("access_token");
+
   if (currentToken && currentToken !== failedToken) {
     return currentToken;
   }
@@ -76,11 +32,7 @@ async function handleUnauthorized(failedToken: string): Promise<string> {
   const newToken = await refreshAccessTokenOnce();
 
   if (!newToken) {
-    sessionStorage.removeItem("access_token");
-    sessionStorage.removeItem("refresh_token");
-    sessionStorage.removeItem("user");
-
-    window.location.assign("/login");
+    clearSessionAndRedirect();
     throw new Error("Your session has expired. Please log in again.");
   }
 
@@ -106,8 +58,11 @@ export async function apiRequest(
   options: RequestInit = {},
 ) {
   const method = (options.method || "GET").toUpperCase();
+
   const toastId =
-    method === "GET" ? undefined : toast.loading("Saving your changes...");
+    method === "GET"
+      ? undefined
+      : toast.loading("Saving your changes...");
 
   try {
     let token = await getValidAccessToken();
@@ -145,7 +100,6 @@ export async function apiRequest(
 
 /**
  * Upload files using FormData.
- * Do not manually set Content-Type.
  */
 export async function apiUpload(
   endpoint: string,

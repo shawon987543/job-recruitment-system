@@ -4,6 +4,7 @@ import { useToastErrorState } from "@/components/ui/toast-message-state";
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../../components/admin/AdminSidebar";
 import CompanyAdminsContent from "./company-admin/page";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 
 import {
   Building2,
@@ -356,6 +357,7 @@ function AdminPageContent({
                 : "Monitor and manage your recruitment platform"}
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         {/* Main Content */}

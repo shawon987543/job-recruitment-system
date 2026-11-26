@@ -1,7 +1,7 @@
 "use client";
 import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   BriefcaseBusiness,
@@ -24,6 +24,9 @@ import { apiRequest } from "@/lib/api";
 import RichTextContent from "@/components/ui/rich-text-content";
 import Skeleton from "@/components/ui/skeleton";
 import "./job-details.css";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
 type Job = {
   id: number;
@@ -140,6 +143,7 @@ function JobDetailsSkeleton() {
 
 export default function JobDetailsPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const jobId = params.id;
 
   const [job, setJob] = useState<Job | null>(null);
@@ -165,8 +169,16 @@ export default function JobDetailsPage() {
     setError("");
 
     try {
-      const response = await apiRequest(`/jobs/${jobId}`);
-      setJob(response as Job);
+      const response = await fetch(`${API_URL}/jobs/${jobId}`, {
+        cache: "no-store",
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.message || "Unable to load this job.");
+      }
+
+      setJob(result as Job);
     } catch (err) {
       setJob(null);
       setError(
@@ -186,6 +198,12 @@ export default function JobDetailsPage() {
     }
 
     setCheckingApplication(true);
+
+    if (!sessionStorage.getItem("access_token")) {
+      setApplication(null);
+      setCheckingApplication(false);
+      return;
+    }
 
     try {
       const response = await apiRequest("/applications/mine");
@@ -220,6 +238,11 @@ export default function JobDetailsPage() {
     event.preventDefault();
 
     if (!jobId || !job) return;
+
+    if (!sessionStorage.getItem("access_token")) {
+      router.push("/login");
+      return;
+    }
 
     setSubmitting(true);
     setApplicationError("");

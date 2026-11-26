@@ -13,6 +13,7 @@ import { User } from './entities/user.entity';
 import { Role } from '../common/enums/role.enum';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CompanyAdminApplication } from './entities/company-admin-application.entity';
+import { CandidateProfile } from '../candidate-profile/entities/candidate-profile.entity';
 import { FindOptionsSelect } from 'typeorm';
 
 @Injectable()
@@ -26,6 +27,9 @@ export class UsersService {
 
   @InjectRepository(CompanyAdminApplication)
   private readonly companyAdminApplicationRepository: Repository<CompanyAdminApplication>,
+
+  @InjectRepository(CandidateProfile)
+  private readonly candidateProfileRepository: Repository<CandidateProfile>,
 ) {}
 
 // Get pending Company Admin registration requests
@@ -238,7 +242,7 @@ async findAllCompanyAdmins() {
 }
   // Get all users
   async findAll() {
-    return this.userRepository.find({
+    const users = await this.userRepository.find({
       select: {
         id: true,
         name: true,
@@ -254,6 +258,31 @@ async findAllCompanyAdmins() {
         createdAt: 'DESC',
       },
     });
+
+    const candidateIds = users
+      .filter((user) => user.role === Role.CANDIDATE)
+      .map((user) => user.id);
+
+    if (candidateIds.length === 0) {
+      return users.map((user) => ({ ...user, profilePictureUrl: null }));
+    }
+
+    const candidateProfiles = await this.candidateProfileRepository.find({
+      where: { user: { id: In(candidateIds) } },
+      relations: { user: true },
+      select: { user: { id: true }, profilePictureUrl: true },
+    });
+    const profilePicturesByUserId = new Map(
+      candidateProfiles.map((profile) => [
+        profile.user.id,
+        profile.profilePictureUrl,
+      ]),
+    );
+
+    return users.map((user) => ({
+      ...user,
+      profilePictureUrl: profilePicturesByUserId.get(user.id) ?? null,
+    }));
   }
 
   // Get one user by ID
@@ -277,7 +306,18 @@ async findAllCompanyAdmins() {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    return user;
+    const candidateProfile =
+      user.role === Role.CANDIDATE
+        ? await this.candidateProfileRepository.findOne({
+            where: { user: { id: user.id } },
+            select: { profilePictureUrl: true },
+          })
+        : null;
+
+    return {
+      ...user,
+      profilePictureUrl: candidateProfile?.profilePictureUrl ?? null,
+    };
   }
 
   // Activate or deactivate a user

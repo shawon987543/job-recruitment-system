@@ -13,6 +13,7 @@ import AdminSidebar from "../../../components/admin/AdminSidebar";
 import RichTextEditor from "@/components/ui/rich-text-editor";
 import { richTextHasContent, sanitizeRichText } from "@/lib/rich-text";
 import Skeleton from "@/components/ui/skeleton";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   ArrowRight,
   Bookmark,
@@ -567,6 +568,7 @@ export default function JobsPage() {
               Manage and monitor all jobs across registered companies.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         <section className="admin-content">

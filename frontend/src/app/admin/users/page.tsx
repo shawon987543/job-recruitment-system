@@ -6,6 +6,7 @@ import { TableSkeleton } from "@/components/ui/table-skeleton";
 import Skeleton from "@/components/ui/skeleton";
 import { useCallback, useState } from "react";
 import type { FormEvent } from "react";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   useMutation,
   useQuery,
@@ -31,6 +32,15 @@ import {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
+function profilePictureSrc(pictureUrl?: string | null) {
+  const value = pictureUrl?.trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const serverUrl = API_URL.replace(/\/api\/?$/, "");
+  return `${serverUrl}${value.startsWith("/") ? "" : "/"}${value}`;
+}
+
 interface User {
   id: number;
   name: string;
@@ -41,6 +51,7 @@ interface User {
   companyId: number | null;
   createdAt: string;
   updatedAt: string;
+  profilePictureUrl?: string | null;
 }
 
 interface CompanySummary {
@@ -732,6 +743,7 @@ export default function UsersPage() {
               Manage candidates, company administrators and accounts.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         <section className="admin-content">
@@ -1040,6 +1052,15 @@ export default function UsersPage() {
                       <div className="admin-user-identity">
                         <div className={`admin-user-avatar ${user.role.toLowerCase().replace("_", "-")}`}>
                           {user.name.trim().charAt(0).toUpperCase() || "U"}
+                          {user.role === "CANDIDATE" && user.profilePictureUrl && (
+                            <img
+                              src={profilePictureSrc(user.profilePictureUrl)}
+                              alt={`${user.name}'s profile`}
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          )}
                         </div>
                         <div className="admin-user-identity-copy">
                           <h3>{user.name}</h3>

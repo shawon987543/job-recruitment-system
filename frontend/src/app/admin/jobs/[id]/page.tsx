@@ -12,6 +12,7 @@ import AdminSidebar from "../../../../components/admin/AdminSidebar";
 import RichTextContent from "@/components/ui/rich-text-content";
 import Skeleton from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   ArrowLeft,
   BriefcaseBusiness,
@@ -203,6 +204,7 @@ export default function AdminJobDetailsPage({ params }: PageProps) {
             <ArrowLeft size={16} />
             All jobs
           </Link>
+          <AdminNotifications />
         </header>
 
         <section className="admin-job-page-content">

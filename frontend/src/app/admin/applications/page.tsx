@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { startToastLoading, useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import type { FormEvent } from "react";
 import Skeleton from "@/components/ui/skeleton";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   useMutation,
   useQuery,
@@ -714,6 +715,7 @@ export default function ApplicationsPage() {
               Review and manage applications across all companies.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         <section className="admin-content">

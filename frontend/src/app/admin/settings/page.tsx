@@ -2,6 +2,7 @@
 import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-message-state";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   User,
   ShieldCheck,
@@ -339,6 +340,7 @@ export default function AdminSettingsPage() {
               Manage your account, security, and preferences.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         <div className="admin-content admin-settings-content">

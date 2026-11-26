@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import AdminSidebar from "../../../components/admin/AdminSidebar";
 import Skeleton from "@/components/ui/skeleton";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   Building2,
   Search,
@@ -675,6 +676,7 @@ export default function CompaniesPage() {
               Manage registrations, company accounts and approvals.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         <section className="admin-content">

@@ -38,6 +38,8 @@
 
 .admin-home-theme .admin-main { background: #f3f8f7; }
 .admin-home-theme .admin-topbar {
+  position: relative;
+  z-index: 101;
   min-height: 88px;
   padding: 18px 36px;
   background: rgba(255,255,255,.94);

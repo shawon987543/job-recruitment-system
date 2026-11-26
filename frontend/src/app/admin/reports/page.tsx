@@ -3,6 +3,7 @@ import { useToastErrorState, useToastSuccessState } from "@/components/ui/toast-
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import AdminNotifications from "@/components/admin/AdminNotifications";
 import {
   Users,
   Building2,
@@ -997,6 +998,7 @@ export default function ReportsPage() {
               Monitor platform statistics and recruitment activity.
             </p>
           </div>
+          <AdminNotifications />
         </header>
 
         {/* PAGE CONTENT */}

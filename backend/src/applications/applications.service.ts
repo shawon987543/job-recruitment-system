@@ -16,9 +16,14 @@ import { User } from '../users/entities/user.entity';
 import { Interview } from '../interviews/entities/interview.entity';
 import { CandidateProfile } from '../candidate-profile/entities/candidate-profile.entity';
 
+import { Role } from '../common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
+
 @Injectable()
 export class ApplicationsService {
   constructor(
+
     @InjectRepository(Company)
     private readonly companiesRepository: Repository<Company>,
 
@@ -36,130 +41,182 @@ export class ApplicationsService {
 
     @InjectRepository(CandidateProfile)
     private readonly candidateProfilesRepository: Repository<CandidateProfile>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // Super Admin can update any application's status.
-async updateStatusForSuperAdmin(
-  applicationId: number,
-  dto: UpdateApplicationStatusDto,
-) {
-  const application = await this.applicationsRepository.findOne({
-    where: { id: applicationId },
-  });
 
-  if (!application) {
-    throw new NotFoundException('Application not found.');
+  // Super Admin can update any application's status.
+  async updateStatusForSuperAdmin(
+    applicationId: number,
+    dto: UpdateApplicationStatusDto,
+  ) {
+    const application = await this.applicationsRepository.findOne({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
+
+    if (application.status === ApplicationStatus.WITHDRAWN) {
+      throw new BadRequestException(
+        'A withdrawn application cannot be updated.',
+      );
+    }
+
+    const previousStatus = application.status;
+
+    application.status = dto.status;
+
+    if (dto.adminNotes !== undefined) {
+      application.adminNotes = dto.adminNotes;
+    }
+
+    const savedApplication =
+      await this.applicationsRepository.save(application);
+
+    if (previousStatus !== savedApplication.status) {
+      const job = await this.jobsRepository.findOne({
+        where: { id: savedApplication.jobId },
+      });
+
+      await this.notifyCandidateOfStatusChange(
+        savedApplication,
+        job?.title || 'your applied job',
+      );
+    }
+
+    return savedApplication;
   }
 
-  if (application.status === ApplicationStatus.WITHDRAWN) {
-    throw new BadRequestException(
-      'A withdrawn application cannot be updated.',
-    );
-  }
 
-  application.status = dto.status;
-
-  if (dto.adminNotes !== undefined) {
-    application.adminNotes = dto.adminNotes;
-  }
-
-  return this.applicationsRepository.save(application);
-}
   // Super Admin views all applications with candidate, job, and company details.
-async findAllForSuperAdmin() {
-  const applications = await this.applicationsRepository.find({
-    order: {
-      appliedAt: 'DESC',
-    },
-  });
+  async findAllForSuperAdmin() {
+    const applications = await this.applicationsRepository.find({
+      order: { appliedAt: 'DESC' },
+    });
 
-  if (applications.length === 0) {
-    return [];
-  }
+    if (applications.length === 0) {
+      return [];
+    }
 
-  const jobIds = [
-    ...new Set(applications.map((application) => application.jobId)),
-  ];
+    const jobIds = [
+      ...new Set(applications.map((application) => application.jobId)),
+    ];
+    const candidateIds = [
+      ...new Set(applications.map((application) => application.candidateId)),
+    ];
 
-  const candidateIds = [
-    ...new Set(applications.map((application) => application.candidateId)),
-  ];
+    const [jobs, candidates] = await Promise.all([
+      this.jobsRepository.find({ where: { id: In(jobIds) } }),
+      this.usersRepository.find({ where: { id: In(candidateIds) } }),
+    ]);
 
-  const jobs = await this.jobsRepository.find({
-    where: {
-      id: In(jobIds),
-    },
-  });
-
-  const candidates = await this.usersRepository.find({
-    where: {
-      id: In(candidateIds),
-    },
-  });
-
-  const companyIds = [
-    ...new Set(
-      jobs.map((job) => job.companyId).filter(
-        (id): id is number => id !== null && id !== undefined,
+    const companyIds = [
+      ...new Set(
+        jobs
+          .map((job) => job.companyId)
+          .filter((id): id is number => id !== null && id !== undefined),
       ),
-    ),
-  ];
-
-  const companies =
-    companyIds.length > 0
-      ? await this.companiesRepository.find({
-          where: {
-            id: In(companyIds),
-          },
-        })
+    ];
+    const companies = companyIds.length
+      ? await this.companiesRepository.find({ where: { id: In(companyIds) } })
       : [];
 
-  const jobMap = new Map(jobs.map((job) => [job.id, job]));
-  const candidateMap = new Map(
-    candidates.map((candidate) => [candidate.id, candidate]),
-  );
-  const companyMap = new Map(
-    companies.map((company) => [company.id, company]),
-  );
+    const jobMap = new Map(jobs.map((job) => [job.id, job]));
+    const candidateMap = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+    const companyMap = new Map(companies.map((company) => [company.id, company]));
 
-  return applications.map((application) => {
-    const job = jobMap.get(application.jobId);
-    const candidate = candidateMap.get(application.candidateId);
-    const company = job ? companyMap.get(job.companyId) : undefined;
+    return applications.map((application) => {
+      const job = jobMap.get(application.jobId);
+      const candidate = candidateMap.get(application.candidateId);
+      const company = job ? companyMap.get(job.companyId) : undefined;
 
-    return {
-      ...application,
+      return {
+        ...application,
+        candidate: candidate
+          ? {
+              id: candidate.id,
+              name: candidate.name,
+              email: candidate.email,
+              isActive: candidate.isActive,
+            }
+          : null,
+        job: job
+          ? {
+              id: job.id,
+              title: job.title,
+              location: job.location,
+              jobType: job.jobType,
+              status: job.status,
+              companyId: job.companyId,
+            }
+          : null,
+        company: company
+          ? {
+              id: company.id,
+              name: company.name,
+              email: company.email,
+            }
+          : null,
+      };
+    });
+  }
 
-      candidate: candidate
-        ? {
-            id: candidate.id,
-            name: candidate.name,
-            email: candidate.email,
-            isActive: candidate.isActive,
-          }
-        : null,
+  // Company Admin updates the status of an application for their company.
+  async updateStatus(
+    applicationId: number,
+    companyId: number,
+    dto: UpdateApplicationStatusDto,
+  ) {
+    const application = await this.applicationsRepository.findOne({
+      where: { id: applicationId },
+    });
 
-      job: job
-        ? {
-            id: job.id,
-            title: job.title,
-            location: job.location,
-            jobType: job.jobType,
-            status: job.status,
-            companyId: job.companyId,
-          }
-        : null,
+    if (!application) {
+      throw new NotFoundException('Application not found.');
+    }
 
-      company: company
-        ? {
-            id: company.id,
-            name: company.name,
-            email: company.email,
-          }
-        : null,
-    };
-  });
-}
+    const job = await this.jobsRepository.findOne({
+      where: { id: application.jobId },
+    });
+
+    if (!job || job.companyId !== companyId) {
+      throw new ForbiddenException(
+        'You cannot manage applications for another company.',
+      );
+    }
+
+    if (application.status === ApplicationStatus.WITHDRAWN) {
+      throw new BadRequestException(
+        'A withdrawn application cannot be updated.',
+      );
+    }
+
+    const previousStatus = application.status;
+
+    application.status = dto.status;
+
+    if (dto.adminNotes !== undefined) {
+      application.adminNotes = dto.adminNotes;
+    }
+
+    const savedApplication =
+      await this.applicationsRepository.save(application);
+
+    // Notify candidate only when the status actually changes.
+    if (previousStatus !== savedApplication.status) {
+      await this.notifyCandidateOfStatusChange(
+        savedApplication,
+        job.title,
+      );
+    }
+
+    return savedApplication;
+  }
+
   // Candidate applies for a published, non-expired job.
   async create(
     jobId: number,
@@ -182,7 +239,6 @@ async findAllForSuperAdmin() {
       throw new NotFoundException('Published job not found.');
     }
 
-    // Compare YYYY-MM-DD values to avoid time-of-day issues.
     const today = new Date().toISOString().slice(0, 10);
 
     if (job.deadline && job.deadline < today) {
@@ -207,10 +263,12 @@ async findAllForSuperAdmin() {
       status: ApplicationStatus.PENDING,
     });
 
+    let savedApplication: Application;
+
     try {
-      return await this.applicationsRepository.save(application);
+      savedApplication =
+        await this.applicationsRepository.save(application);
     } catch (error: unknown) {
-      // The database constraint also protects against simultaneous requests.
       if (
         typeof error === 'object' &&
         error !== null &&
@@ -224,6 +282,44 @@ async findAllForSuperAdmin() {
 
       throw error;
     }
+
+    // Notify active Company Admins belonging to this job's company.
+    try {
+      const companyAdmins = await this.usersRepository.find({
+        where: {
+          role: Role.COMPANY_ADMIN,
+          companyId: job.companyId,
+          isActive: true,
+        },
+      });
+
+      await Promise.all(
+        companyAdmins.map(async (admin) => {
+          try {
+            await this.notificationsService.createAndSend({
+              userId: admin.id,
+              title: 'New Job Application',
+              message: `A candidate has applied for "${job.title}".`,
+              type: NotificationType.NEW_APPLICATION,
+              referenceId: savedApplication.id,
+              referenceType: 'APPLICATION',
+            });
+          } catch (error) {
+            console.error(
+              `Failed to notify Company Admin ${admin.id}:`,
+              error,
+            );
+          }
+        }),
+      );
+    } catch (error) {
+      console.error(
+        'Failed to notify Company Admins about the new application:',
+        error,
+      );
+    }
+
+    return savedApplication;
   }
 
   // Candidate views only their own applications.
@@ -346,43 +442,58 @@ async findAllForSuperAdmin() {
     );
   }
 
-  // Company Admin updates the status of an application for their company.
-  async updateStatus(
-    applicationId: number,
-    companyId: number,
-    dto: UpdateApplicationStatusDto,
+  private async notifyCandidateOfStatusChange(
+    application: Application,
+    jobTitle: string,
   ) {
-    const application = await this.applicationsRepository.findOne({
-      where: { id: applicationId },
-    });
+    let notificationType: NotificationType | null = null;
+    let title = '';
+    let message = '';
 
-    if (!application) {
-      throw new NotFoundException('Application not found.');
+    switch (application.status) {
+      case ApplicationStatus.SHORTLISTED:
+        notificationType = NotificationType.APPLICATION_SHORTLISTED;
+        title = 'Application Shortlisted';
+        message = `Congratulations! Your application for "${jobTitle}" has been shortlisted.`;
+        break;
+
+      case ApplicationStatus.INTERVIEW:
+        notificationType = NotificationType.APPLICATION_INTERVIEW;
+        title = 'Interview Stage';
+        message = `Your application for "${jobTitle}" has moved to the interview stage.`;
+        break;
+
+      case ApplicationStatus.SELECTED:
+        notificationType = NotificationType.APPLICATION_SELECTED;
+        title = 'Application Selected';
+        message = `Congratulations! You have been selected for "${jobTitle}".`;
+        break;
+
+      case ApplicationStatus.REJECTED:
+        notificationType = NotificationType.APPLICATION_REJECTED;
+        title = 'Application Update';
+        message = `Your application for "${jobTitle}" was not selected.`;
+        break;
+
+      default:
+        return;
     }
 
-    const job = await this.jobsRepository.findOne({
-      where: { id: application.jobId },
-    });
-
-    if (!job || job.companyId !== companyId) {
-      throw new ForbiddenException(
-        'You cannot manage applications for another company.',
+    try {
+      await this.notificationsService.createAndSend({
+        userId: application.candidateId,
+        title,
+        message,
+        type: notificationType,
+        referenceId: application.id,
+        referenceType: 'APPLICATION',
+      });
+    } catch (error) {
+      console.error(
+        `Failed to notify candidate ${application.candidateId} about application ${application.id}:`,
+        error,
       );
     }
-
-    if (application.status === ApplicationStatus.WITHDRAWN) {
-      throw new BadRequestException(
-        'A withdrawn application cannot be updated.',
-      );
-    }
-
-    application.status = dto.status;
-
-    if (dto.adminNotes !== undefined) {
-      application.adminNotes = dto.adminNotes;
-    }
-
-    return this.applicationsRepository.save(application);
   }
 
   // Candidate can withdraw only their own pending application.
