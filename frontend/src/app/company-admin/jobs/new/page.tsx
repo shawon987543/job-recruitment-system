@@ -194,14 +194,14 @@ export default function NewCompanyJobPage() {
   return (
     <main className="ca-content jm-posting-page">
       <div className="jm-posting-page-heading">
+        <button type="button" className="jm-posting-cancel" onClick={() => router.push("/company-admin/jobs")}>
+          <ArrowLeft size={16} /> Cancel
+        </button>
         <div>
           <span className="jm-eyebrow">JOB POSTING WORKSPACE</span>
           <h2>Post a new job</h2>
           <p>About 5 minutes. You can create a draft and publish it when it is ready.</p>
         </div>
-        <button type="button" className="jm-posting-cancel" onClick={() => router.push("/company-admin/jobs")}>
-          <ArrowLeft size={16} /> Cancel
-        </button>
       </div>
 
       <nav className="jm-wizard-steps" aria-label="Job posting steps">

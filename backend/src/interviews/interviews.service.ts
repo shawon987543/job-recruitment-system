@@ -16,6 +16,8 @@ import { Application } from '../applications/entities/application.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { CreateInterviewDto } from './dto/create-interview.dto';
 import { UpdateInterviewDto } from './dto/update-interview.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class InterviewsService {
@@ -28,6 +30,8 @@ export class InterviewsService {
 
     @InjectRepository(Job)
     private readonly jobRepository: Repository<Job>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(
@@ -94,6 +98,33 @@ export class InterviewsService {
     if (application.status !== 'INTERVIEW') {
       application.status = 'INTERVIEW' as Application['status'];
       await this.applicationRepository.save(application);
+    }
+
+    const scheduledTime = interview.scheduledAt.toLocaleString('en-BD', {
+      timeZone: 'Asia/Dhaka',
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    });
+    const interviewDetails =
+      interview.type === InterviewType.ONLINE
+        ? ` Join the interview here: ${interview.meetingLink}`
+        : ` Interview location: ${interview.location}`;
+
+    try {
+      await this.notificationsService.createAndSend({
+        userId: application.candidateId,
+        title: 'Interview Scheduled',
+        message: `Your interview for "${job.title}" starts at ${scheduledTime}.${interviewDetails}`,
+        type: NotificationType.INTERVIEW_SCHEDULED,
+        referenceId: interview.id,
+        referenceType: 'INTERVIEW',
+      });
+    } catch (error) {
+      // Keep interview creation successful if notification delivery fails.
+      console.error(
+        `Failed to notify candidate ${application.candidateId} about interview ${interview.id}:`,
+        error,
+      );
     }
 
     return this.findOne(companyId, interview.id);

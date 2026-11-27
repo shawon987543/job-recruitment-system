@@ -17,6 +17,12 @@ import { SearchJobsDto } from './dto/search-jobs.dto';
 import { Company } from '../companies/entities/company.entity';
 import { CompanyStatus } from '../common/enums/company-status.enum';
 
+import { User } from '../users/entities/user.entity';
+import { Role } from '../common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType, Notification } from '../notifications/entities/notification.entity';
+
+
 @Injectable()
 export class JobsService {
   constructor(
@@ -25,7 +31,52 @@ export class JobsService {
 
     @InjectRepository(Company)
     private readonly companiesRepository: Repository<Company>,
+
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  // ........
+  // Job Service
+  //.............
+
+  private async notifyActiveSuperAdmins(
+  job: Job,
+  companyName: string,
+) {
+  try {
+    const admins = await this.userRepository.find({
+      where: {
+        role: Role.SUPER_ADMIN,
+        isActive: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    await Promise.all(
+      admins.map((admin) =>
+        this.notificationsService.createAndSend({
+          userId: admin.id,
+          title: 'New Job Published',
+          message: `${companyName} has published a new job: "${job.title}".`,
+          type: NotificationType.NEW_JOB_PUBLISHED,
+          referenceId: job.id,
+          referenceType: 'JOB',
+        }),
+      ),
+    );
+  } catch (error) {
+    console.error(
+      'Failed to notify Super Admins about published job:',
+      error,
+    );
+  }
+}
+
 
   // ==========================================
   // COMPANY APPROVAL CHECK
@@ -429,22 +480,40 @@ export class JobsService {
   // ==========================================
 
   async publish(
-    id: number,
-    companyId: number | null,
-  ) {
-    const job = await this.findOwnedJob(id, companyId);
+  id: number,
+  companyId: number | null,
+) {
+  const job = await this.findOwnedJob(id, companyId);
 
-    if (job.status === JobStatus.CLOSED) {
-      throw new BadRequestException(
-        'A closed job cannot be published again.',
-      );
-    }
-
-    job.status = JobStatus.PUBLISHED;
-
-    return this.jobsRepository.save(job);
+  if (job.status === JobStatus.CLOSED) {
+    throw new BadRequestException(
+      'A closed job cannot be published again.',
+    );
   }
 
+  const isNewPublication = job.status !== JobStatus.PUBLISHED;
+
+  job.status = JobStatus.PUBLISHED;
+
+  const savedJob = await this.jobsRepository.save(job);
+
+  if (isNewPublication) {
+    const company = await this.companiesRepository.findOne({
+      where: { id: job.companyId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+
+    await this.notifyActiveSuperAdmins(
+      savedJob,
+      company?.name ?? 'A company',
+    );
+  }
+
+  return savedJob;
+}
   // ==========================================
   // COMPANY ADMIN: CLOSE JOB
   // ==========================================

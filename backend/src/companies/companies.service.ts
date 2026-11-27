@@ -19,6 +19,8 @@ import { Company } from './entities/company.entity';
 import { RegisterCompanyDto } from './dto/register-company.dto';
 import { CreateCompanyAdminDto } from './dto/create-company-admin.dto';
 import { RegisterCompanyAdminDto } from './dto/register-company-admin.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 
 @Injectable()
 export class CompaniesService {
@@ -33,7 +35,73 @@ export class CompaniesService {
     private readonly userRepository: Repository<User>,
 
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
+
+  private async notifyActiveSuperAdmins(
+    title: string,
+    message: string,
+    companyId: number,
+  ) {
+    try {
+      const admins = await this.userRepository.find({
+        where: { role: Role.SUPER_ADMIN, isActive: true },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        admins.map((admin) =>
+          this.notificationsService.createAndSend({
+            userId: admin.id,
+            title,
+            message,
+            type: NotificationType.COMPANY_REGISTERED,
+            referenceId: companyId,
+            referenceType: 'COMPANY',
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to notify Super Admins about company registration:', error);
+    }
+  }
+
+  private async notifyCompanyAdmins(
+    companyId: number,
+    title: string,
+    message: string,
+    type:
+  | NotificationType.COMPANY_APPROVED
+  | NotificationType.COMPANY_REJECTED
+  | NotificationType.COMPANY_SUSPENDED
+  | NotificationType.COMPANY_REACTIVATED,
+  ) {
+    try {
+      const admins = await this.userRepository.find({
+        where: {
+          role: Role.COMPANY_ADMIN,
+          companyId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      await Promise.all(
+        admins.map((admin) =>
+          this.notificationsService.createAndSend({
+            userId: admin.id,
+            title,
+            message,
+            type,
+            referenceId: companyId,
+            referenceType: 'COMPANY',
+          }),
+        ),
+      );
+    } catch (error) {
+      console.error(`Failed to send company notification for ${companyId}:`, error);
+    }
+  }
 
   // Super Admin: list and search all companies with assigned admins.
   async findAll(
@@ -222,6 +290,12 @@ export class CompaniesService {
     try {
       const savedCompany = await this.companiesRepository.save(company);
 
+      await this.notifyActiveSuperAdmins(
+        'New Company Registration',
+        `${savedCompany.name} has submitted a company registration request.`,
+        savedCompany.id,
+      );
+
       return {
         message:
           'Company Admin registration request submitted successfully. Await Super Admin approval.',
@@ -346,8 +420,30 @@ export class CompaniesService {
       throw new NotFoundException('Company not found');
     }
 
+    const wasActive = company.isActive;
+
     company.isActive = isActive;
     await this.companiesRepository.save(company);
+
+    // Company suspended
+    if (wasActive && !isActive) {
+      await this.notifyCompanyAdmins(
+        company.id,
+        'Company Suspended',
+        `Your company "${company.name}" has been suspended by the Super Admin. Please contact support for assistance.`,
+        NotificationType.COMPANY_SUSPENDED,
+      );
+    }
+
+    // Company reactivated
+    if (!wasActive && isActive) {
+      await this.notifyCompanyAdmins(
+        company.id,
+        'Company Reactivated',
+        `Your company "${company.name}" has been reactivated. You can now access your company dashboard.`,
+        NotificationType.COMPANY_REACTIVATED,
+      );
+    }
 
     return {
       message: `Company ${isActive ? 'activated' : 'deactivated'} successfully`,
@@ -599,6 +695,12 @@ export class CompaniesService {
       const savedCompany =
         await this.companiesRepository.save(company);
 
+      await this.notifyActiveSuperAdmins(
+        'New Company Registration',
+        `${savedCompany.name} has submitted a company registration request.`,
+        savedCompany.id,
+      );
+
       return {
         message:
           'Company registration submitted successfully',
@@ -725,6 +827,13 @@ export class CompaniesService {
       },
     );
 
+    await this.notifyCompanyAdmins(
+      result.company.id,
+      'Company Approved',
+      `${result.company.name} has been approved. You can now manage jobs and applications.`,
+      NotificationType.COMPANY_APPROVED,
+    );
+
     // Send credentials after the database transaction succeeds.
     if (result.admin && result.temporaryPassword) {
       try {
@@ -800,6 +909,13 @@ export class CompaniesService {
     company.reviewedAt = new Date();
 
     await this.companiesRepository.save(company);
+
+    await this.notifyCompanyAdmins(
+      company.id,
+      'Company Registration Rejected',
+      `The registration for ${company.name} was rejected. Reason: ${company.rejectionReason}`,
+      NotificationType.COMPANY_REJECTED,
+    );
 
     return {
       message: 'Company rejected successfully',

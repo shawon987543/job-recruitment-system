@@ -29,7 +29,6 @@ export function connectNotificationSocket(
 
   notificationSocket = io(serverUrl, {
     auth: { token: accessToken },
-    transports: ["websocket"],
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 2000,
@@ -51,6 +50,34 @@ export function connectNotificationSocket(
 
   notificationSocket.on("disconnect", (reason) => {
     console.log("Notification socket disconnected:", reason);
+
+    // Socket.IO does not automatically reconnect after a server disconnect.
+    // The gateway uses a server disconnect when the access token is invalid
+    // or expired, so refresh it before reconnecting.
+    if (reason !== "io server disconnect" || refreshingSocketToken) {
+      return;
+    }
+
+    refreshingSocketToken = true;
+
+    void refreshAccessTokenOnce()
+      .then((newToken) => {
+        if (!newToken) {
+          clearSessionAndRedirect();
+          return;
+        }
+
+        if (!notificationSocket) return;
+
+        notificationSocket.auth = { token: newToken };
+        notificationSocket.connect();
+      })
+      .catch((error) => {
+        console.error("Could not reconnect notification socket:", error);
+      })
+      .finally(() => {
+        refreshingSocketToken = false;
+      });
   });
 
   notificationSocket.on("connect_error", async (error) => {

@@ -5,10 +5,12 @@ import { Application } from '../applications/entities/application.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { InterviewsService } from './interviews.service';
 import { InterviewsController } from './interviews.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Interview, Application, Job]),
+    NotificationsModule,
   ],
   controllers: [InterviewsController],
   providers: [InterviewsService],

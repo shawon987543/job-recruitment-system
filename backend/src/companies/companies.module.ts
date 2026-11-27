@@ -6,6 +6,7 @@ import { User } from '../users/entities/user.entity';
 import { CompanyAdminApplication } from '../users/entities/company-admin-application.entity';
 import { CompaniesController } from './companies.controller';
 import { CompaniesService } from './companies.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CompaniesService } from './companies.service';
       CompanyAdminApplication,
     ]),
     MailModule,
+    NotificationsModule,
   ],
   controllers: [CompaniesController],
   providers: [CompaniesService],
